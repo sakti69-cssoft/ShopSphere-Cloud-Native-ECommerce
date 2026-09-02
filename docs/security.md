@@ -6,7 +6,7 @@
 - Product/inventory trust the private service network and gateway for mutation authorization. They must not be exposed directly. Local ports bind loopback; production publishes only Nginx.
 - Production application containers drop capabilities, forbid privilege escalation and run non-root. Databases use their upstream initialization privileges. Do not enable privileged mode or mount the Docker socket into applications.
 - SQL schema users are separate. Mongo currently uses an administrator URI; replace with scoped app credentials. Redis is password protected, persistence enabled, with cart TTL.
-- .env, keys, state, dependency/build folders and real tfvars are ignored. CI checks candidate/tracked paths and secret patterns; Trivy adds vulnerability/config/secret scanning. Never print compose's expanded secrets.
+- .env, keys, state, dependency/build folders and real tfvars are ignored. CI checks candidate/tracked paths and secret patterns; Trivy scans repository secrets/configuration without dependency resolution and scans built production images for vulnerabilities. Never print compose's expanded secrets.
 - CI publishes only after test/security gates; GITHUB_TOKEN has package permissions only where needed. No AWS keys in code/workflows.
 - Terraform requires IMDSv2, encrypted disk, explicit web SG and restricted optional SSH. No public DB ports. No WAF/TLS/HA/backups are claimed.
 - Trivy exceptions document intended public web ingress and cost-conscious flow-log omission. Review before production, do not suppress all findings.

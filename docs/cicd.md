@@ -5,7 +5,7 @@ ci.yml runs on main pushes, pull requests and manual dispatch. Frontend uses Nod
 flowchart LR
  D[Developer] --> GH[GitHub push / PR]
  GH --> T[Frontend + six Maven jobs]
- GH --> S[Trivy filesystem/config + hygiene]
+ GH --> S[Trivy repository secrets/config + hygiene]
  GH --> TF[Terraform fmt/init/validate]
  T --> Gate[All checks pass]
  S --> Gate
@@ -20,7 +20,7 @@ Reusable security.yml and terraform.yml are called by CI. docker-publish.yml is 
 
 Images: ghcr.io/OWNER/shopsphere-{auth-service,product-service,inventory-service,cart-service,order-service,gateway,nginx,frontend}:SHA. Latest is a convenience tag; deploy the full SHA. The matrix can partially publish if another image fails: deploy only a completely green run.
 
-Trivy gates fixed HIGH/CRITICAL dependency vulnerabilities, secrets and high-impact IaC findings. Unfixed dependency findings remain a documented residual risk. Narrow IaC exceptions are listed in .trivyignore; do not add blanket vulnerability suppressions. CycloneDX SBOM artifacts are generated per image. Dependabot covers npm, Maven, Actions, Docker and Terraform.
+Repository Trivy scans gate secrets and high-impact configuration/IaC findings without contacting Maven Central. Fixed HIGH/CRITICAL dependency vulnerabilities are gated on the built production images, which reflect the actual shipped runtime and must pass before GHCR publication. Unfixed dependency findings remain a documented residual risk. Narrow IaC exceptions are listed in .trivyignore; do not add blanket vulnerability suppressions. CycloneDX SBOM artifacts are generated per image. Dependabot covers npm, Maven, Actions, Docker and Terraform.
 
 Before enabling deployment, configure repository branch protections and reviewers. There is intentionally no automatic AWS apply or SSH deployment workflow. scripts/deploy.sh is the explicit manual approval boundary. Workflows cannot be executed on GitHub until a remote repository is available.
 

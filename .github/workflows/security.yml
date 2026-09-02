@@ -13,26 +13,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Secret hygiene
         run: node scripts/check-secrets.mjs
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-      - name: Populate Maven metadata for offline scanning
-        shell: bash
-        run: |
-          for pom in gateway/pom.xml services/*/pom.xml; do
-            mvn -B -f "$pom" dependency:go-offline -DskipTests
-          done
-      - name: Trivy filesystem (fixed HIGH/CRITICAL)
+      - name: Trivy repository secret scan
         run: >-
-          docker run --rm -v "$PWD:/src:ro" -v "$HOME/.m2:/root/.m2:ro"
-          aquasec/trivy:0.74.0 fs --scanners vuln,secret
-          --skip-dirs .git --skip-dirs frontend/node_modules --skip-dirs frontend/.next
-          --skip-dirs .tools --skip-dirs .validation --skip-dirs terraform/.terraform
-          --skip-dirs services/auth-service/target --skip-dirs services/product-service/target
-          --skip-dirs services/inventory-service/target --skip-dirs services/cart-service/target
-          --skip-dirs services/order-service/target --skip-dirs gateway/target
-          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 /src
-      - name: Trivy configuration
-        run: docker run --rm -v "$PWD:/src:ro" -w /src aquasec/trivy:0.74.0 config --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore terraform
+          docker run --rm -v "$PWD:/src:ro"
+          aquasec/trivy:0.74.0 fs --scanners secret
+          --skip-dirs /src/.git --skip-dirs /src/frontend/node_modules --skip-dirs /src/frontend/.next
+          --skip-dirs /src/.tools --skip-dirs /src/.validation --skip-dirs /src/terraform/.terraform
+          --skip-dirs /src/services/auth-service/target --skip-dirs /src/services/product-service/target
+          --skip-dirs /src/services/inventory-service/target --skip-dirs /src/services/cart-service/target
+          --skip-dirs /src/services/order-service/target --skip-dirs /src/gateway/target
+          --skip-files '**/pom.xml'
+          --exit-code 1 /src
+      - name: Trivy repository configuration scan
+        run: >-
+          docker run --rm -v "$PWD:/src:ro" -w /src
+          aquasec/trivy:0.74.0 config
+          --skip-dirs /src/.git --skip-dirs /src/frontend/node_modules --skip-dirs /src/frontend/.next
+          --skip-dirs /src/.tools --skip-dirs /src/.validation --skip-dirs /src/terraform/.terraform
+          --skip-dirs /src/services/auth-service/target --skip-dirs /src/services/product-service/target
+          --skip-dirs /src/services/inventory-service/target --skip-dirs /src/services/cart-service/target
+          --skip-dirs /src/services/order-service/target --skip-dirs /src/gateway/target
+          --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore /src

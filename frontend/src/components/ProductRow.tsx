@@ -1,0 +1,2 @@
+import Link from "next/link";import { Product } from "@/types";import { ProductCard } from "./ProductCard";
+export function ProductRow({title,kicker,products,link="/search"}:{title:string;kicker?:string;products:Product[];link?:string}){return <section className="section"><div className="section-head"><div>{kicker&&<span>{kicker}</span>}<h2>{title}</h2></div><Link href={link}>View all →</Link></div><div className="product-row">{products.map(p=><ProductCard key={p.id} product={p}/>)}</div></section>}

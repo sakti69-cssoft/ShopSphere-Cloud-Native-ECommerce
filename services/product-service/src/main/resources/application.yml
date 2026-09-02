@@ -1,0 +1,9 @@
+server.port: ${SERVER_PORT:8082}
+spring:
+  application.name: product-service
+  data.mongodb:
+    uri: ${PRODUCT_MONGODB_URI:mongodb://localhost:27017/shopsphere_products}
+    auto-index-creation: true
+management.endpoints.web.exposure.include: health,info,prometheus
+shopsphere.jwt.secret: ${JWT_SECRET}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

@@ -1,0 +1,13 @@
+server.port: ${SERVER_PORT:8083}
+spring:
+  application.name: inventory-service
+  datasource:
+    url: ${INVENTORY_DB_URL:jdbc:mysql://localhost:3306/shopsphere_inventory}
+    username: ${INVENTORY_DB_USERNAME:shopsphere_inventory}
+    password: ${INVENTORY_DB_PASSWORD:change-me}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  flyway.enabled: true
+management.endpoints.web.exposure.include: health,info,prometheus
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

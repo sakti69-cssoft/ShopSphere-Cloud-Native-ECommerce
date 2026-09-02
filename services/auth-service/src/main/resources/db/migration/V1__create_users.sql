@@ -1,0 +1,2 @@
+CREATE TABLE users (id BINARY(16) NOT NULL PRIMARY KEY,first_name VARCHAR(100) NOT NULL,last_name VARCHAR(100) NOT NULL,email VARCHAR(320) NOT NULL,password_hash VARCHAR(100) NOT NULL,phone VARCHAR(30),role VARCHAR(20) NOT NULL,enabled BOOLEAN NOT NULL,created_at TIMESTAMP(6) NOT NULL,updated_at TIMESTAMP(6) NOT NULL,CONSTRAINT uk_users_email UNIQUE(email));
+CREATE INDEX idx_users_email ON users(email);

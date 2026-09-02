@@ -1,0 +1,3 @@
+import type { Metadata } from "next";import "./globals.css";import { StoreProvider } from "@/context/store";import { AuthProvider } from "@/context/auth";import { AppShell } from "@/components/AppShell";
+export const metadata:Metadata={title:{default:"ShopSphere — Everything worth having",template:"%s | ShopSphere"},description:"A premium marketplace for technology, fashion, home and everyday essentials."};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body><AuthProvider><StoreProvider><AppShell>{children}</AppShell></StoreProvider></AuthProvider></body></html>}

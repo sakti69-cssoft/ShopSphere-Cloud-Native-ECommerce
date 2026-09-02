@@ -1,0 +1,3 @@
+package com.shopsphere;
+import java.util.UUID;import org.springframework.http.client.ClientHttpRequestInterceptor;import org.springframework.web.context.request.*;
+final class CorrelationHeaders{private CorrelationHeaders(){}static ClientHttpRequestInterceptor interceptor(){return(request,body,execution)->{var a=RequestContextHolder.getRequestAttributes();String id=a instanceof ServletRequestAttributes s?s.getRequest().getHeader("X-Correlation-ID"):null;if(id==null||!id.matches("[A-Za-z0-9._-]{1,100}"))id=UUID.randomUUID().toString();request.getHeaders().set("X-Correlation-ID",id);return execution.execute(request,body);};}}

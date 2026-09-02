@@ -1,0 +1,14 @@
+# Host-packaged fallback for environments where Docker cannot reach Maven Central.
+services:
+  gateway:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: gateway}}
+  auth-service:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: services/auth-service}}
+  product-service:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: services/product-service}}
+  inventory-service:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: services/inventory-service}}
+  cart-service:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: services/cart-service}}
+  order-service:
+    build: {context: ., dockerfile: docker/Dockerfile.prebuilt, args: {APP_PATH: services/order-service}}

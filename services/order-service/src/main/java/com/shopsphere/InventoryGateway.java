@@ -1,0 +1,5 @@
+package com.shopsphere;
+import java.util.*;import org.springframework.http.HttpStatusCode;import org.springframework.web.client.RestClient;
+public interface InventoryGateway{void reserve(UUID productId,int quantity);void release(UUID productId,int quantity);}
+class HttpInventoryGateway implements InventoryGateway{private final RestClient client;HttpInventoryGateway(RestClient c){client=c;}public void reserve(UUID id,int q){call(id,q,"reserve","Inventory reservation failed");}public void release(UUID id,int q){call(id,q,"release","Inventory compensation failed");}private void call(UUID id,int q,String op,String message){try{client.post().uri("/api/inventory/{id}/{operation}",id,op).body(Map.of("quantity",q)).retrieve().onStatus(HttpStatusCode::isError,(request,response)->{throw new InventoryCommunicationException(message);}).toBodilessEntity();}catch(InventoryCommunicationException e){throw e;}catch(RuntimeException e){throw new InventoryCommunicationException("Inventory service is temporarily unavailable");}}}
+class InventoryCommunicationException extends RuntimeException{InventoryCommunicationException(String m){super(m);}}

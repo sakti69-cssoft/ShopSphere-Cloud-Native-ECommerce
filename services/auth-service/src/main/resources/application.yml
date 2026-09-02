@@ -1,0 +1,18 @@
+server.port: ${SERVER_PORT:8081}
+spring:
+  application.name: auth-service
+  datasource:
+    url: ${AUTH_DB_URL:jdbc:mysql://localhost:3306/shopsphere_auth}
+    username: ${AUTH_DB_USERNAME:shopsphere_auth}
+    password: ${AUTH_DB_PASSWORD:change-me}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  flyway.enabled: true
+management:
+  endpoints.web.exposure.include: health,info,prometheus
+shopsphere.jwt:
+  secret: ${JWT_SECRET}
+  access-minutes: ${JWT_ACCESS_MINUTES:15}
+  refresh-days: ${JWT_REFRESH_DAYS:7}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

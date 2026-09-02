@@ -1,0 +1,19 @@
+server.port: ${SERVER_PORT:8085}
+spring:
+  application.name: order-service
+  datasource:
+    url: ${ORDER_DB_URL:jdbc:mysql://localhost:3306/shopsphere_orders}
+    username: ${ORDER_DB_USERNAME:shopsphere_orders}
+    password: ${ORDER_DB_PASSWORD:change-me}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  flyway.enabled: true
+management.endpoints.web.exposure.include: health,info,prometheus
+shopsphere:
+  inventory-service-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+  product-service-url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+  http:
+    connect-timeout: ${SERVICE_CONNECT_TIMEOUT:2s}
+    read-timeout: ${SERVICE_READ_TIMEOUT:3s}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

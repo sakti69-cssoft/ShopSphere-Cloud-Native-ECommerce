@@ -1,0 +1,91 @@
+server:
+  port: ${SERVER_PORT:8080}
+  netty.connection-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:2000}
+spring:
+  application.name: shopsphere-gateway
+  data.redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2s
+  cloud.gateway.server.webflux:
+    httpclient:
+      connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:2000}
+      response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:10s}
+    default-filters:
+      - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+    routes:
+      - id: auth-v1
+        uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+        predicates:
+          - Path=/api/v1/auth/**
+        filters:
+          - RewritePath=/api/v1/auth/(?<segment>.*), /api/auth/${segment}
+          - name: RequestRateLimiter
+            args:
+              key-resolver: "#{@clientKeyResolver}"
+              redis-rate-limiter.replenishRate: ${AUTH_RATE_REPLENISH:2}
+              redis-rate-limiter.burstCapacity: ${AUTH_RATE_BURST:5}
+              redis-rate-limiter.requestedTokens: 1
+      - id: products-v1
+        uri: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+        predicates:
+          - Path=/api/v1/products,/api/v1/products/**
+        filters:
+          - RewritePath=/api/v1/products(?<segment>/?.*), /api/products${segment}
+          - name: RequestRateLimiter
+            args: {key-resolver: "#{@clientKeyResolver}", redis-rate-limiter.replenishRate: "${API_RATE_REPLENISH:20}", redis-rate-limiter.burstCapacity: "${API_RATE_BURST:40}", redis-rate-limiter.requestedTokens: 1}
+          - name: CircuitBreaker
+            args: {name: products, fallbackUri: forward:/fallback/products}
+          - name: Retry
+            args: {retries: 2, methods: GET, statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT, backoff.firstBackoff: 50ms, backoff.maxBackoff: 200ms}
+      - id: inventory-v1
+        uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+        predicates: [Path=/api/v1/inventory/**]
+        filters:
+          - RewritePath=/api/v1/inventory(?<segment>/?.*), /api/inventory${segment}
+          - name: RequestRateLimiter
+            args: {key-resolver: "#{@clientKeyResolver}", redis-rate-limiter.replenishRate: "${WRITE_RATE_REPLENISH:10}", redis-rate-limiter.burstCapacity: "${WRITE_RATE_BURST:20}", redis-rate-limiter.requestedTokens: 1}
+          - name: CircuitBreaker
+            args: {name: inventory}
+      - id: cart-v1
+        uri: ${CART_SERVICE_URL:http://localhost:8084}
+        predicates: [Path=/api/v1/cart/**]
+        filters:
+          - RewritePath=/api/v1/cart(?<segment>/?.*), /api/cart${segment}
+          - name: RequestRateLimiter
+            args: {key-resolver: "#{@clientKeyResolver}", redis-rate-limiter.replenishRate: "${WRITE_RATE_REPLENISH:10}", redis-rate-limiter.burstCapacity: "${WRITE_RATE_BURST:20}", redis-rate-limiter.requestedTokens: 1}
+          - name: CircuitBreaker
+            args: {name: cart}
+      - id: orders-v1
+        uri: ${ORDER_SERVICE_URL:http://localhost:8085}
+        predicates: ["Path=/api/v1/orders,/api/v1/orders/**"]
+        filters:
+          - RewritePath=/api/v1/orders(?<segment>/?.*), /api/orders${segment}
+          - name: RequestRateLimiter
+            args: {key-resolver: "#{@clientKeyResolver}", redis-rate-limiter.replenishRate: "${WRITE_RATE_REPLENISH:10}", redis-rate-limiter.burstCapacity: "${WRITE_RATE_BURST:20}", redis-rate-limiter.requestedTokens: 1}
+          - name: CircuitBreaker
+            args: {name: orders}
+      - {id: auth-compat, uri: "${AUTH_SERVICE_URL:http://localhost:8081}", predicates: [Path=/api/auth/**]}
+      - {id: products-compat, uri: "${PRODUCT_SERVICE_URL:http://localhost:8082}", predicates: [Path=/api/products/**]}
+      - {id: inventory-compat, uri: "${INVENTORY_SERVICE_URL:http://localhost:8083}", predicates: [Path=/api/inventory/**]}
+      - {id: cart-compat, uri: "${CART_SERVICE_URL:http://localhost:8084}", predicates: [Path=/api/cart/**]}
+      - {id: orders-compat, uri: "${ORDER_SERVICE_URL:http://localhost:8085}", predicates: [Path=/api/orders/**]}
+management:
+  endpoints.web.exposure.include: health,info,metrics,prometheus
+  endpoint.health.show-details: never
+  metrics.tags.application: ${spring.application.name}
+shopsphere:
+  jwt.secret: ${JWT_SECRET}
+  cors.allowed-origins: ${FRONTEND_ORIGIN:http://localhost:3000}
+resilience4j.circuitbreaker.instances:
+  products: {slidingWindowSize: 10, minimumNumberOfCalls: 5, failureRateThreshold: 50, waitDurationInOpenState: 10s}
+  inventory: {slidingWindowSize: 10, minimumNumberOfCalls: 5, failureRateThreshold: 50, waitDurationInOpenState: 10s}
+  cart: {slidingWindowSize: 10, minimumNumberOfCalls: 5, failureRateThreshold: 50, waitDurationInOpenState: 10s}
+  orders: {slidingWindowSize: 10, minimumNumberOfCalls: 5, failureRateThreshold: 50, waitDurationInOpenState: 10s}
+resilience4j.timelimiter.instances:
+  products: {timeoutDuration: 5s}
+  inventory: {timeoutDuration: 5s}
+  cart: {timeoutDuration: 5s}
+  orders: {timeoutDuration: 8s}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

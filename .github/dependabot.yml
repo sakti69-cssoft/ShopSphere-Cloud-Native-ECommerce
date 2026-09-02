@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: {interval: weekly}
+  - package-ecosystem: maven
+    directories: [/gateway, /services/auth-service, /services/product-service, /services/inventory-service, /services/cart-service, /services/order-service]
+    schedule: {interval: weekly}
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+  - package-ecosystem: docker
+    directories: [/frontend, /gateway, /nginx, /services/auth-service, /services/product-service, /services/inventory-service, /services/cart-service, /services/order-service]
+    schedule: {interval: weekly}
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule: {interval: weekly}

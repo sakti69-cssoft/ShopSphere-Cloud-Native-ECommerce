@@ -1,0 +1,5 @@
+package com.shopsphere;
+import java.math.BigDecimal;import java.util.UUID;import org.springframework.http.HttpStatusCode;import org.springframework.web.client.RestClient;
+interface ProductPricingGateway{PricedProduct resolve(OrderDtos.Item requested);record PricedProduct(UUID id,String name,String sku,BigDecimal price,boolean active){} }
+class HttpProductPricingGateway implements ProductPricingGateway{private final RestClient client;HttpProductPricingGateway(RestClient client){this.client=client;}public PricedProduct resolve(OrderDtos.Item requested){try{PricedProduct product=client.get().uri("/api/products/{id}",requested.productId()).retrieve().onStatus(HttpStatusCode::isError,(req,res)->{throw new ProductPricingException("Product is unavailable");}).body(PricedProduct.class);if(product==null||!product.active())throw new ProductPricingException("Product is unavailable");return product;}catch(ProductPricingException e){throw e;}catch(RuntimeException e){throw new ProductPricingException("Product service is temporarily unavailable");}}}
+class ProductPricingException extends RuntimeException{ProductPricingException(String message){super(message);}}

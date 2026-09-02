@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.m2
+.tools
+.validation
+frontend
+terraform
+docs
+**/target/classes
+**/target/test-classes
+**/target/surefire-reports
+**/target/*.original

@@ -1,0 +1,38 @@
+name: Security
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '25 3 * * 1'
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secret hygiene
+        run: node scripts/check-secrets.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Populate Maven metadata for offline scanning
+        shell: bash
+        run: |
+          for pom in gateway/pom.xml services/*/pom.xml; do
+            mvn -B -f "$pom" dependency:go-offline -DskipTests
+          done
+      - name: Trivy filesystem (fixed HIGH/CRITICAL)
+        run: >-
+          docker run --rm -v "$PWD:/src:ro" -v "$HOME/.m2:/root/.m2:ro"
+          aquasec/trivy:0.74.0 fs --scanners vuln,secret
+          --skip-dirs .git --skip-dirs frontend/node_modules --skip-dirs frontend/.next
+          --skip-dirs .tools --skip-dirs .validation --skip-dirs terraform/.terraform
+          --skip-dirs services/auth-service/target --skip-dirs services/product-service/target
+          --skip-dirs services/inventory-service/target --skip-dirs services/cart-service/target
+          --skip-dirs services/order-service/target --skip-dirs gateway/target
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 /src
+      - name: Trivy configuration
+        run: docker run --rm -v "$PWD:/src:ro" -w /src aquasec/trivy:0.74.0 config --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore terraform

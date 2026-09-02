@@ -1,0 +1,16 @@
+server.port: ${SERVER_PORT:8084}
+spring:
+  application.name: cart-service
+  data.redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2s
+management.endpoints.web.exposure.include: health,info,prometheus
+shopsphere:
+  cart.ttl-hours: ${CART_TTL_HOURS:72}
+  product-service-url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+  http:
+    connect-timeout: ${SERVICE_CONNECT_TIMEOUT:2s}
+    read-timeout: ${SERVICE_READ_TIMEOUT:3s}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true

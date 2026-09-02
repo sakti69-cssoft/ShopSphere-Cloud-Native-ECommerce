@@ -1,0 +1,2 @@
+package com.shopsphere;import java.math.BigDecimal;import java.time.Instant;import java.util.*;
+public record Product(UUID id,String sku,String name,String slug,String description,String brand,String category,BigDecimal price,BigDecimal originalPrice,BigDecimal discountPercentage,double rating,long reviewCount,List<String> imageUrls,Map<String,String> specifications,boolean active,Instant createdAt,Instant updatedAt){}

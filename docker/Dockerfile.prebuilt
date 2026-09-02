@@ -1,0 +1,9 @@
+# Offline/local fallback: package and test on the host first.
+# CI uses the regular multi-stage service Dockerfiles.
+FROM eclipse-temurin:21-jre-alpine
+ARG APP_PATH
+RUN addgroup -S shopsphere && adduser -S shopsphere -G shopsphere
+WORKDIR /app
+COPY ${APP_PATH}/target/*-0.1.0.jar app.jar
+USER shopsphere
+ENTRYPOINT ["java","-XX:MaxRAMPercentage=65","-jar","/app/app.jar"]

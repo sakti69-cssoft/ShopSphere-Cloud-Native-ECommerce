@@ -1,0 +1,4 @@
+"use client";
+import Link from "next/link";import { Suspense } from "react";import { useSearchParams } from "next/navigation";import { RequireAuth } from "@/components/RequireAuth";
+function Content(){const id=useSearchParams().get("id");return <div className="success"><div className="success-mark">✓</div><h1 className="page-title">Your order is confirmed</h1><p>We’ve safely received your order.</p><div className="panel"><b>What happens next</b><h2>We’re preparing your order</h2><small>Track its live status from your order history.</small></div>{id&&<Link className="btn-primary" href={`/orders/${id}`}>Track your order</Link>} <Link className="btn-secondary" style={{color:"var(--ink)"}} href="/">Continue shopping</Link></div>}
+export default function Success(){return <RequireAuth><Suspense fallback={<div className="state-card">Loading confirmation…</div>}><Content/></Suspense></RequireAuth>}

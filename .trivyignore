@@ -1,0 +1,6 @@
+# AVD-AWS-0178: VPC flow logs omitted in cost-conscious portfolio; enable before production.
+AVD-AWS-0178
+# AVD-AWS-0104 / AVD-AWS-0107: public HTTP/HTTPS intentionally terminate at Nginx.
+# No SSH wildcard or public database ports permitted. Review exceptions before production.
+AVD-AWS-0104
+AVD-AWS-0107

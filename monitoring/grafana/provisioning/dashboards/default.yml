@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: ShopSphere
+    folder: ShopSphere
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

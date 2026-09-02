@@ -1,0 +1,28 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [observability]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro", "./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro", "prometheus-data:/prometheus"]
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [shopsphere]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"], interval: 15s, timeout: 5s, retries: 10}
+  grafana:
+    image: grafana/grafana:12.1.1
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD for observability}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes: ["grafana-data:/var/lib/grafana", "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro", "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"]
+    ports: ["127.0.0.1:3001:3000"]
+    networks: [shopsphere]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"], interval: 15s, timeout: 5s, retries: 10}
+volumes:
+  prometheus-data:
+  grafana-data:

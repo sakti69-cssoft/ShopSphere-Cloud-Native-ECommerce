@@ -1,0 +1,1 @@
+package com.shopsphere;import java.time.Instant;import java.util.UUID;public record Inventory(UUID id,UUID productId,String sku,int quantityAvailable,int quantityReserved,int reorderLevel,Instant updatedAt){public int sellable(){return quantityAvailable-quantityReserved;}}

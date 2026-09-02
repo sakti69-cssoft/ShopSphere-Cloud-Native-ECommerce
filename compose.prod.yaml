@@ -1,0 +1,116 @@
+name: shopsphere-prod
+x-app: &app
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  networks: [shopsphere]
+  deploy: {resources: {limits: {cpus: "1.0", memory: 768M}}}
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      AUTH_DB_NAME: ${AUTH_DB_NAME}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      INVENTORY_DB_NAME: ${INVENTORY_DB_NAME}
+      INVENTORY_DB_USERNAME: ${INVENTORY_DB_USERNAME}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD}
+      ORDER_DB_NAME: ${ORDER_DB_NAME}
+      ORDER_DB_USERNAME: ${ORDER_DB_USERNAME}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
+    volumes: [mysql-data:/var/lib/mysql, ./docker/mysql/init:/docker-entrypoint-initdb.d:ro]
+    networks: [shopsphere]
+    healthcheck: {test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"], interval: 10s, timeout: 5s, retries: 20}
+    deploy: {resources: {limits: {cpus: "1.0", memory: 1G}}}
+  mongodb:
+    image: mongo:8.0
+    environment: {MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USERNAME}", MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD}", MONGO_INITDB_DATABASE: "${PRODUCT_DB_NAME}"}
+    volumes: [mongo-data:/data/db]
+    networks: [shopsphere]
+    healthcheck: {test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\" | grep 1"], interval: 10s, timeout: 5s, retries: 20}
+    deploy: {resources: {limits: {cpus: "1.0", memory: 768M}}}
+  redis:
+    image: redis:7.4-alpine
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    environment: {REDIS_PASSWORD: "${REDIS_PASSWORD}"}
+    volumes: [redis-data:/data]
+    networks: [shopsphere]
+    healthcheck: {test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"], interval: 5s, timeout: 3s, retries: 20}
+    deploy: {resources: {limits: {cpus: "0.5", memory: 256M}}}
+  auth-service:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-auth-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {AUTH_DB_URL: "jdbc:mysql://mysql:3306/${AUTH_DB_NAME}", AUTH_DB_USERNAME: "${AUTH_DB_USERNAME}", AUTH_DB_PASSWORD: "${AUTH_DB_PASSWORD}", JWT_SECRET: "${JWT_SECRET}"}
+    depends_on: {mysql: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  product-service:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-product-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {PRODUCT_MONGODB_URI: "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${PRODUCT_DB_NAME}?authSource=admin", JWT_SECRET: "${JWT_SECRET}", SPRING_PROFILES_ACTIVE: production}
+    depends_on: {mongodb: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  inventory-service:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-inventory-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {INVENTORY_DB_URL: "jdbc:mysql://mysql:3306/${INVENTORY_DB_NAME}", INVENTORY_DB_USERNAME: "${INVENTORY_DB_USERNAME}", INVENTORY_DB_PASSWORD: "${INVENTORY_DB_PASSWORD}"}
+    depends_on: {mysql: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  cart-service:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-cart-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {JWT_SECRET: "${JWT_SECRET}", REDIS_HOST: redis, REDIS_PASSWORD: "${REDIS_PASSWORD}", CART_TTL_HOURS: "${CART_TTL_HOURS}", PRODUCT_SERVICE_URL: "http://product-service:8082"}
+    depends_on: {redis: {condition: service_healthy}, product-service: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  order-service:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-order-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {JWT_SECRET: "${JWT_SECRET}", ORDER_DB_URL: "jdbc:mysql://mysql:3306/${ORDER_DB_NAME}", ORDER_DB_USERNAME: "${ORDER_DB_USERNAME}", ORDER_DB_PASSWORD: "${ORDER_DB_PASSWORD}", INVENTORY_SERVICE_URL: "http://inventory-service:8083", PRODUCT_SERVICE_URL: "http://product-service:8082"}
+    depends_on: {mysql: {condition: service_healthy}, product-service: {condition: service_healthy}, inventory-service: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  gateway:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-gateway:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment:
+      JWT_SECRET: "${JWT_SECRET}"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:3000}"
+      AUTH_SERVICE_URL: http://auth-service:8081
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      INVENTORY_SERVICE_URL: http://inventory-service:8083
+      CART_SERVICE_URL: http://cart-service:8084
+      ORDER_SERVICE_URL: http://order-service:8085
+      AUTH_RATE_REPLENISH: "${AUTH_RATE_REPLENISH:-2}"
+      AUTH_RATE_BURST: "${AUTH_RATE_BURST:-5}"
+      API_RATE_REPLENISH: "${API_RATE_REPLENISH:-20}"
+      API_RATE_BURST: "${API_RATE_BURST:-40}"
+      WRITE_RATE_REPLENISH: "${WRITE_RATE_REPLENISH:-10}"
+      WRITE_RATE_BURST: "${WRITE_RATE_BURST:-20}"
+      GATEWAY_RESPONSE_TIMEOUT: "${GATEWAY_RESPONSE_TIMEOUT:-10s}"
+    depends_on:
+      redis: {condition: service_healthy}
+      auth-service: {condition: service_healthy}
+      product-service: {condition: service_healthy}
+      inventory-service: {condition: service_healthy}
+      cart-service: {condition: service_healthy}
+      order-service: {condition: service_healthy}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
+  frontend:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-frontend:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    environment: {HOSTNAME: "0.0.0.0", PORT: "3000", NODE_ENV: production}
+    healthcheck: {test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 10s, timeout: 5s, retries: 20}
+  nginx:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-nginx:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    ports: ["80:80"]
+    volumes: ["./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: {gateway: {condition: service_healthy}, frontend: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health | grep healthy"], interval: 10s, timeout: 5s, retries: 20}
+networks:
+  shopsphere: {name: shopsphere-prod}
+volumes:
+  mysql-data:
+  mongo-data:
+  redis-data:

@@ -35,7 +35,7 @@ jobs:
         app: [gateway, services/auth-service, services/product-service, services/inventory-service, services/cart-service, services/order-service]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'

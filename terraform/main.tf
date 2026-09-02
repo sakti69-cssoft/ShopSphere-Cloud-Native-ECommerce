@@ -18,4 +18,10 @@ module "compute" {
   instance_profile  = module.iam.instance_profile
   instance_type     = var.instance_type
   key_name          = var.key_name
+  root_volume_size  = var.root_volume_size
+  name              = "shopsphere-${var.environment}"
+  user_data = templatefile("${path.module}/user-data.sh.tftpl", {
+    repository_url = var.repository_url
+    repository_ref = var.repository_ref
+  })
 }

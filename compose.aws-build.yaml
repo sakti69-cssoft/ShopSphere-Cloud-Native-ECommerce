@@ -1,0 +1,12 @@
+services:
+  auth-service: {build: ./services/auth-service}
+  product-service: {build: ./services/product-service}
+  inventory-service: {build: ./services/inventory-service}
+  cart-service: {build: ./services/cart-service}
+  order-service: {build: ./services/order-service}
+  gateway: {build: ./gateway}
+  frontend:
+    build:
+      context: ./frontend
+      args: {NEXT_PUBLIC_API_BASE_URL: /api/v1}
+  nginx: {build: ./nginx}

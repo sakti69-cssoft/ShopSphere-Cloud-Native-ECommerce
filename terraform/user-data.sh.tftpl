@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee /var/log/shopsphere-bootstrap.log) 2>&1
+dnf install -y docker git curl openssl
+systemctl enable --now docker
+install -d /usr/local/lib/docker/cli-plugins
+compose_version=v2.39.4
+tmp=$(mktemp -d)
+curl -fsSL "https://github.com/docker/compose/releases/download/$compose_version/docker-compose-linux-x86_64" -o "$tmp/docker-compose"
+curl -fsSL "https://github.com/docker/compose/releases/download/$compose_version/checksums.txt" -o "$tmp/checksums.txt"
+(cd "$tmp" && grep ' docker-compose-linux-x86_64$' checksums.txt | sed 's/docker-compose-linux-x86_64/docker-compose/' | sha256sum -c -)
+install -m 0755 "$tmp/docker-compose" /usr/local/lib/docker/cli-plugins/docker-compose
+rm -rf "$tmp"
+git clone "${repository_url}" /opt/shopsphere
+git -C /opt/shopsphere checkout --detach "${repository_ref}"
+cd /opt/shopsphere
+umask 077
+random_secret() { openssl rand -base64 48 | tr -d '\n'; }
+token=$(curl -fsS -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600' http://169.254.169.254/latest/api/token)
+public_ip=$(curl -fsS -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
+cat > .env.production <<EOF
+MYSQL_ROOT_PASSWORD=$(random_secret)
+AUTH_DB_NAME=shopsphere_auth
+AUTH_DB_USERNAME=shopsphere_auth
+AUTH_DB_PASSWORD=$(random_secret)
+INVENTORY_DB_NAME=shopsphere_inventory
+INVENTORY_DB_USERNAME=shopsphere_inventory
+INVENTORY_DB_PASSWORD=$(random_secret)
+ORDER_DB_NAME=shopsphere_orders
+ORDER_DB_USERNAME=shopsphere_orders
+ORDER_DB_PASSWORD=$(random_secret)
+MONGO_ROOT_USERNAME=shopsphere_root
+MONGO_ROOT_PASSWORD=$(random_secret)
+PRODUCT_DB_NAME=shopsphere_products
+REDIS_PASSWORD=$(random_secret)
+JWT_SECRET=$(random_secret)
+CART_TTL_HOURS=72
+FRONTEND_ORIGIN=http://$public_ip
+GHCR_OWNER=local-build
+IMAGE_TAG=${repository_ref}
+EOF
+chmod 0600 .env.production
+docker compose --env-file .env.production -f compose.prod.yaml -f compose.aws-build.yaml build
+docker compose --env-file .env.production -f compose.prod.yaml -f compose.aws-build.yaml up -d --wait --wait-timeout 600

@@ -1,6 +1,6 @@
 provider "aws" {
   region = var.region
   default_tags {
-    tags = { Project = "ShopSphere", ManagedBy = "Terraform", Environment = var.environment }
+    tags = { Project = "ShopSphere", ManagedBy = "Terraform", Environment = var.environment, Owner = "Saktisuman-Panda" }
   }
 }

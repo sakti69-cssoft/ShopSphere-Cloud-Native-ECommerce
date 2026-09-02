@@ -9,13 +9,12 @@ resource "aws_security_group" "edge" {
   vpc_id      = var.vpc_id
 }
 resource "aws_vpc_security_group_ingress_rule" "web" {
-  for_each          = toset(["80", "443"])
   security_group_id = aws_security_group.edge.id
-  description       = "Public web ingress"
+  description       = "Public HTTP ingress; TLS is not configured yet"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "tcp"
-  from_port         = tonumber(each.value)
-  to_port           = tonumber(each.value)
+  from_port         = 80
+  to_port           = 80
 }
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
   count             = var.ssh_cidr == null ? 0 : 1
@@ -35,3 +34,4 @@ resource "aws_vpc_security_group_egress_rule" "https" {
   to_port           = 443
 }
 output "security_group_id" { value = aws_security_group.edge.id }
+output "public_ingress_ports" { value = [80] }

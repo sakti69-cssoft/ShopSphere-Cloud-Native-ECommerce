@@ -4,12 +4,30 @@ variable "region" {
 }
 variable "environment" {
   type    = string
-  default = "portfolio"
+  default = "portfolio-demo"
 }
 variable "instance_type" {
   type        = string
   default     = "t3.large"
   description = "Full JVM/database stack needs about 8 GiB. t3.small is not recommended for the full stack."
+}
+variable "root_volume_size" {
+  type        = number
+  default     = 40
+  description = "Encrypted gp3 root volume size in GiB."
+  validation {
+    condition     = var.root_volume_size >= 30 && var.root_volume_size <= 100
+    error_message = "Root volume size must be between 30 and 100 GiB."
+  }
+}
+variable "repository_url" {
+  type    = string
+  default = "https://github.com/sakti69-cssoft/ShopSphere-Cloud-Native-ECommerce.git"
+}
+variable "repository_ref" {
+  type        = string
+  default     = "bc921a05b070523ad13edb7654f812af6473d327"
+  description = "Exact reviewed Git commit deployed by bootstrap."
 }
 variable "ssh_cidr" {
   type        = string

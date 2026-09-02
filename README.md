@@ -109,7 +109,7 @@ flowchart LR
 
 [CI](.github/workflows/ci.yml) validates Node 22 lint/build/typecheck and runs Maven test/package for Gateway plus five services on Java 21. Main-branch publication uses BuildKit caching, loads and scans every image before GHCR login/push, generates CycloneDX SBOM artifacts, and publishes both the immutable git SHA and `latest`. Deployments should select the full SHA.
 
-[Security CI](.github/workflows/security.yml) performs secret hygiene plus Trivy filesystem/config scans and fails on applicable fixed HIGH/CRITICAL findings. Image scans run before publication. [Dependabot](.github/dependabot.yml) covers npm, Maven, GitHub Actions, Docker and Terraform. No personal registry token or AWS credential is stored in a workflow.
+[Security CI](.github/workflows/security.yml) performs secret hygiene plus repository secret/configuration scans without resolving Maven dependencies. Every production Docker image receives a fixed HIGH/CRITICAL vulnerability gate before its GHCR push. [Dependabot](.github/dependabot.yml) covers npm, Maven, GitHub Actions, Docker and Terraform. No personal registry token or AWS credential is stored in a workflow.
 
 GitHub workflows are prepared locally but have not run on GitHub because this repository has no configured remote.
 
@@ -235,7 +235,8 @@ Last completed local validation:
 | Order pricing manipulation | Passed in automated unit tests |
 | Terraform fmt/init/validate | Passed; no apply |
 | Trivy Terraform configuration scan | Passed: 0 HIGH/CRITICAL findings |
-| Trivy filesystem vulnerability/secret scan | Passed: 0 fixed HIGH/CRITICAL findings |
+| Trivy repository secret/configuration scans | Passed |
+| Trivy production-image vulnerability gates | Configured before every GHCR image push |
 | Secret hygiene script | Passed |
 | Workflow and Dependabot YAML parsing | Passed |
 | Docker image builds | Passed: frontend plus all seven Compose application/proxy images |

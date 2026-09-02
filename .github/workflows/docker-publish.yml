@@ -27,7 +27,7 @@ jobs:
         env:
           OWNER: ${{ github.repository_owner }}
         run: echo "IMAGE=ghcr.io/${OWNER,,}/shopsphere-${{ matrix.name }}" >> "$GITHUB_ENV"
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           load: true

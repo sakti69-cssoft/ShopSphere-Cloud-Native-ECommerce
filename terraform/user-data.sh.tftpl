@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 exec > >(tee /var/log/shopsphere-bootstrap.log) 2>&1
-dnf install -y docker git curl openssl
+# Amazon Linux 2023 ships curl-minimal, which provides the curl command.
+# Installing the full curl package alongside it causes a package conflict.
+if ! command -v curl >/dev/null; then
+  dnf install -y curl-minimal
+fi
+dnf install -y docker git openssl
 systemctl enable --now docker
 install -d /usr/local/lib/docker/cli-plugins
 compose_version=v2.39.4

@@ -2,7 +2,7 @@ region = "ap-south-1"
 environment = "portfolio-demo"
 instance_type = "t3.large"
 root_volume_size = 40
-# repository_ref must be an exact reviewed 40-character commit SHA.
+repository_ref = "0123456789abcdef0123456789abcdef01234567"
 # Optional: your own public IPv4 /32, never 0.0.0.0/0.
 # ssh_cidr = "203.0.113.10/32"
 # key_name = "your-existing-keypair"

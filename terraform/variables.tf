@@ -26,8 +26,11 @@ variable "repository_url" {
 }
 variable "repository_ref" {
   type        = string
-  default     = "bc921a05b070523ad13edb7654f812af6473d327"
-  description = "Exact reviewed Git commit deployed by bootstrap."
+  description = "Exact reviewed 40-character Git commit SHA deployed by bootstrap."
+  validation {
+    condition     = can(regex("^[0-9a-fA-F]{40}$", var.repository_ref))
+    error_message = "repository_ref must be an exact 40-character Git commit SHA."
+  }
 }
 variable "ssh_cidr" {
   type        = string

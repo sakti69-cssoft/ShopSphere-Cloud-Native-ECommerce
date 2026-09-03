@@ -41,7 +41,7 @@ class GatewaySecurity {
             .pathMatchers(HttpMethod.PUT, "/api/v1/orders/**", "/api/orders/**").hasRole("ADMIN")
             .pathMatchers(HttpMethod.POST, "/api/v1/inventory/**", "/api/inventory/**").hasRole("ADMIN")
             .pathMatchers(HttpMethod.GET, "/api/v1/products/admin", "/api/products/admin").hasRole("ADMIN")
-            .pathMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/products/**").permitAll()
+            .pathMatchers(HttpMethod.GET, "/api/v1/products", "/api/products", "/api/v1/products/**", "/api/products/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/api/v1/products/**", "/api/products/**").hasRole("ADMIN")
             .pathMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/products/**", "/api/v1/inventory/**", "/api/inventory/**").hasRole("ADMIN")
             .pathMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/products/**").hasRole("ADMIN")

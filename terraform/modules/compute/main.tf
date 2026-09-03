@@ -37,8 +37,11 @@ resource "aws_instance" "this" {
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
-  credit_specification {
-    cpu_credits = "standard"
+  dynamic "credit_specification" {
+    for_each = startswith(var.instance_type, "t") ? [1] : []
+    content {
+      cpu_credits = "standard"
+    }
   }
   root_block_device {
     volume_type           = "gp3"

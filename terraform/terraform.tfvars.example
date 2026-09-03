@@ -1,6 +1,6 @@
 region = "ap-south-1"
 environment = "portfolio-demo"
-instance_type = "t3.large"
+instance_type = "m7i-flex.large"
 root_volume_size = 40
 repository_ref = "0123456789abcdef0123456789abcdef01234567"
 # Optional: your own public IPv4 /32, never 0.0.0.0/0.

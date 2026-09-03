@@ -8,8 +8,8 @@ variable "environment" {
 }
 variable "instance_type" {
   type        = string
-  default     = "t3.large"
-  description = "Full JVM/database stack needs about 8 GiB. t3.small is not recommended for the full stack."
+  default     = "m7i-flex.large"
+  description = "Full JVM/database stack needs about 8 GiB; keep this configurable for future environments."
 }
 variable "root_volume_size" {
   type        = number

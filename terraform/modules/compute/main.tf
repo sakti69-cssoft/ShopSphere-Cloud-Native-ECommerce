@@ -36,6 +36,9 @@ resource "aws_instance" "this" {
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
+  credit_specification {
+    cpu_credits = "standard"
+  }
   root_block_device {
     volume_type           = "gp3"
     volume_size           = var.root_volume_size

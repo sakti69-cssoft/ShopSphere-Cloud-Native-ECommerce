@@ -1,5 +1,7 @@
 #!/bin/bash
-set -eu
+# This file is sourced by the official MySQL entrypoint. Enabling nounset here
+# leaks into the parent script and breaks its optional environment variables.
+set -e
 mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
 CREATE DATABASE IF NOT EXISTS \`${AUTH_DB_NAME}\`;
 CREATE DATABASE IF NOT EXISTS \`${INVENTORY_DB_NAME}\`;

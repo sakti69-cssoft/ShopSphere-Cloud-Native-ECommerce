@@ -4,6 +4,7 @@ import { useState } from "react";
 import { categories } from "@/data/mock";
 import { useStore } from "@/context/store";
 import { useAuth } from "@/context/auth";
+import { SearchBox } from "@/components/SearchBox";
 
 function LineIcon({name}:{name:"pin"|"user"|"box"|"heart"|"bag"|"search"|"menu"}){
  const paths={pin:<><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></>,user:<><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-4 3.1-6 7-6s6.3 2 7 6"/></>,box:<><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></>,heart:<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>,bag:<><path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></>,search:<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,menu:<><path d="M4 7h16M4 12h16M4 17h16"/></>};
@@ -14,7 +15,7 @@ export function Header(){const {cartCount,wishlist}=useStore();const {user}=useA
  <div className="topbar"><span>Complimentary delivery over ₹999</span><span>Easy 7-day returns</span><span>100% secure checkout</span></div>
  <div className="header-main"><button className="mobile-toggle" onClick={()=>setOpen(!open)} aria-expanded={open} aria-controls="category-navigation" aria-label="Toggle navigation"><LineIcon name="menu"/></button><Link className="logo" href="/" aria-label="ShopSphere home"><b>SHOP</b><i>SPHERE</i></Link>
  <button className="location" aria-label="Choose delivery location"><LineIcon name="pin"/><span><small>Deliver to</small><strong>Select location</strong></span></button>
- <form className="search" action="/search"><label className="sr-only" htmlFor="header-category">Search category</label><select id="header-category" name="category"><option value="">All categories</option>{categories.slice(0,8).map(c=><option key={c.name}>{c.name}</option>)}</select><label className="sr-only" htmlFor="header-search">Search ShopSphere</label><input id="header-search" name="q" placeholder="Search products, brands and categories"/><button aria-label="Submit search"><LineIcon name="search"/></button></form>
+ <SearchBox/>
  <nav className="actions" aria-label="Account actions"><Link href={user?"/account":"/login"}><LineIcon name="user"/><span><small>{user?`Hello, ${user.firstName}`:"Hello, sign in"}</small><b>Account</b></span></Link><Link href="/orders"><LineIcon name="box"/><span><small>Track & manage</small><b>Orders</b></span></Link><Link href="/wishlist"><span className="action-glyph"><LineIcon name="heart"/><em>{wishlist.length}</em></span><span className="action-label">Wishlist</span></Link><Link href="/cart"><span className="action-glyph"><LineIcon name="bag"/><em>{cartCount}</em></span><span className="action-label">Cart</span></Link></nav></div>
  <nav id="category-navigation" className={`category-nav ${open?"open":""}`} aria-label="Product categories"><Link className="all-link" href="/search"><LineIcon name="menu"/> All</Link>{categories.slice(0,8).map(c=><Link key={c.name} href={`/search?category=${c.name}`} onClick={()=>setOpen(false)}>{c.name}</Link>)}<Link className="nav-deal" href="/search?badge=Deal">Sphere Sale <span>Up to 60% off</span></Link></nav>
  </header>}

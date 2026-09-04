@@ -3,8 +3,10 @@ import jakarta.validation.Valid;import java.util.*;import org.springframework.ht
 @RestController @RequestMapping("/api/orders")
 public class OrderController{
  private final OrderService service;OrderController(OrderService s){service=s;}
+ @PostMapping("/quote") @PreAuthorize("#r.userId().toString() == authentication.name")
+ CouponDtos.QuoteResponse quote(@Valid @RequestBody CouponDtos.QuoteRequest r){return service.quote(r);}
  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("#r.userId().toString() == authentication.name")
- Order create(@RequestHeader(value="Idempotency-Key",required=false)String key,@Valid @RequestBody OrderDtos.Create r){return service.create(key,r);}
+ Order create(@RequestHeader(value="Idempotency-Key",required=false)String key,@RequestHeader(value=HttpHeaders.AUTHORIZATION,required=false)String authorization,@Valid @RequestBody OrderDtos.Create r){return service.create(key,authorization,r);}
  @GetMapping @PreAuthorize("hasRole('ADMIN')")
  List<Order> all(@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="25")int size){return service.all(page,size);}
  @GetMapping("/{id}") @PreAuthorize("hasRole('ADMIN') or @orderService.get(#id).userId().toString() == authentication.name")

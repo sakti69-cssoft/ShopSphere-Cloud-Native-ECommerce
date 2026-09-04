@@ -13,6 +13,7 @@ management.endpoints.web.exposure.include: health,info,prometheus
 shopsphere:
   inventory-service-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
   product-service-url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+  auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
   http:
     connect-timeout: ${SERVICE_CONNECT_TIMEOUT:2s}
     read-timeout: ${SERVICE_READ_TIMEOUT:3s}

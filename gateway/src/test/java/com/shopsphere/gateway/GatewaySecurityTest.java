@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 @WebFluxTest(controllers = FallbackController.class)
 @Import({GatewaySecurity.class, GatewayConfiguration.class})
@@ -23,6 +24,18 @@ class GatewaySecurityTest {
   @Test void wishlistAndReviewWritesRejectMissingToken() {
     client.get().uri("/api/v1/products/wishlist").exchange().expectStatus().isUnauthorized();
     client.post().uri("/api/v1/products/00000000-0000-0000-0000-000000000000/reviews").exchange().expectStatus().isUnauthorized();
+  }
+
+  @Test void profileAddressAndCouponQuoteRejectMissingToken() {
+    client.get().uri("/api/v1/auth/me").exchange().expectStatus().isUnauthorized();
+    client.get().uri("/api/v1/auth/addresses").exchange().expectStatus().isUnauthorized();
+    client.post().uri("/api/v1/orders/quote").exchange().expectStatus().isUnauthorized();
+  }
+
+  @Test void customerCannotUseAdminCouponEndpoints() {
+    client.mutateWith(mockJwt().jwt(jwt -> jwt.subject("00000000-0000-0000-0000-000000000000")
+        .claim("role", "CUSTOMER"))).get().uri("/api/v1/orders/admin/coupons").exchange()
+        .expectStatus().isForbidden();
   }
 
   @Test void malformedJwtGetsSafeUnauthorizedResponse() {

@@ -25,7 +25,7 @@ export default function ProductPage() {
  const[rating,setRating]=useState(5),[title,setTitle]=useState(""),[text,setText]=useState("");
  const mine=useMemo(()=>reviews.find(review=>review.userId===user?.id),[reviews,user]);
 
- const load=useCallback(async()=>{try{const api=await productApi.get(id);const product=toProduct(api);const[relatedProducts,reviewPage,inventory]=await Promise.all([productApi.related(id,4),productApi.reviews(id,0,10),inventoryApi.get(id).catch(()=>null)]);setError("");setP(product);setRelated(relatedProducts.map(toProduct));setReviews(reviewPage.content);setStock(inventory?.sellable??null);const own=reviewPage.content.find(review=>review.userId===user?.id);setRating(own?.rating??5);setTitle(own?.title??"");setText(own?.text??"")}catch(e){setError(e instanceof Error?e.message:"Product unavailable")}},[id,user?.id]);
+ const load=useCallback(async()=>{try{const api=await productApi.get(id);const product=toProduct(api);const[relatedProducts,reviewPage,inventory]=await Promise.all([productApi.related(id,4),productApi.reviews(id,0,10),inventoryApi.get(id).catch(()=>null)]);setError("");setP(product);setRelated(relatedProducts.map(toProduct));setReviews(reviewPage.content);setStock(inventory?inventory.quantityAvailable-inventory.quantityReserved:null);const own=reviewPage.content.find(review=>review.userId===user?.id);setRating(own?.rating??5);setTitle(own?.title??"");setText(own?.text??"")}catch(e){setError(e instanceof Error?e.message:"Product unavailable")}},[id,user?.id]);
  useEffect(()=>{void Promise.resolve().then(load)},[load]);
 
  if(error)return <div className="page-wrap"><div className="state-card" role="alert"><h1>Product unavailable</h1><p>{error}</p><Link href="/search">Return to catalog</Link></div></div>;

@@ -11,3 +11,4 @@ spring:
   flyway.enabled: true
 management.endpoints.web.exposure.include: health,info,prometheus
 management.metrics.distribution.percentiles-histogram.http.server.requests: true
+shopsphere.demo-catalog.enabled: ${DEMO_CATALOG_ENABLED:false}

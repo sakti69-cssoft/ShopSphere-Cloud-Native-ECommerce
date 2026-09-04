@@ -20,6 +20,11 @@ class GatewaySecurityTest {
         .expectBody().jsonPath("$.status").isEqualTo(401);
   }
 
+  @Test void wishlistAndReviewWritesRejectMissingToken() {
+    client.get().uri("/api/v1/products/wishlist").exchange().expectStatus().isUnauthorized();
+    client.post().uri("/api/v1/products/00000000-0000-0000-0000-000000000000/reviews").exchange().expectStatus().isUnauthorized();
+  }
+
   @Test void malformedJwtGetsSafeUnauthorizedResponse() {
     client.get().uri("/api/v1/orders/00000000-0000-0000-0000-000000000000")
         .header(HttpHeaders.AUTHORIZATION, "Bearer malformed.token").exchange().expectStatus().isUnauthorized()

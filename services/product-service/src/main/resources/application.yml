@@ -6,5 +6,7 @@ spring:
     uuid-representation: standard
     auto-index-creation: true
 management.endpoints.web.exposure.include: health,info,prometheus
-shopsphere.jwt.secret: ${JWT_SECRET}
+shopsphere:
+  jwt.secret: ${JWT_SECRET}
+  demo-catalog.enabled: ${DEMO_CATALOG_ENABLED:false}
 management.metrics.distribution.percentiles-histogram.http.server.requests: true

@@ -47,13 +47,13 @@ services:
   product-service:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-product-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
-    environment: {PRODUCT_MONGODB_URI: "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${PRODUCT_DB_NAME}?authSource=admin", JWT_SECRET: "${JWT_SECRET}", SPRING_PROFILES_ACTIVE: production}
+    environment: {PRODUCT_MONGODB_URI: "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${PRODUCT_DB_NAME}?authSource=admin", JWT_SECRET: "${JWT_SECRET}", SPRING_PROFILES_ACTIVE: production, DEMO_CATALOG_ENABLED: "true"}
     depends_on: {mongodb: {condition: service_healthy}}
     healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
   inventory-service:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-inventory-service:${IMAGE_TAG:?Set immutable IMAGE_TAG}
-    environment: {INVENTORY_DB_URL: "jdbc:mysql://mysql:3306/${INVENTORY_DB_NAME}", INVENTORY_DB_USERNAME: "${INVENTORY_DB_USERNAME}", INVENTORY_DB_PASSWORD: "${INVENTORY_DB_PASSWORD}"}
+    environment: {INVENTORY_DB_URL: "jdbc:mysql://mysql:3306/${INVENTORY_DB_NAME}", INVENTORY_DB_USERNAME: "${INVENTORY_DB_USERNAME}", INVENTORY_DB_PASSWORD: "${INVENTORY_DB_PASSWORD}", DEMO_CATALOG_ENABLED: "true"}
     depends_on: {mysql: {condition: service_healthy}}
     healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep UP"], interval: 10s, timeout: 5s, retries: 20}
   cart-service:

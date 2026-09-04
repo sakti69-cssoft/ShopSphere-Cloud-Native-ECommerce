@@ -13,6 +13,7 @@ module "iam" {
 }
 module "compute" {
   source            = "./modules/compute"
+  ami_id            = var.ami_id
   subnet_id         = module.networking.public_subnet_id
   security_group_id = module.security.security_group_id
   instance_profile  = module.iam.instance_profile
@@ -24,4 +25,15 @@ module "compute" {
     repository_url = var.repository_url
     repository_ref = var.repository_ref
   })
+}
+
+resource "aws_eip" "shopsphere" {
+  domain   = "vpc"
+  instance = module.compute.instance_id
+
+  tags = {
+    Name = "shopsphere-${var.environment}"
+  }
+
+  depends_on = [module.networking]
 }

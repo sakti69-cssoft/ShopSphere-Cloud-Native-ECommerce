@@ -11,6 +11,16 @@ variable "instance_type" {
   default     = "m7i-flex.large"
   description = "Full JVM/database stack needs about 8 GiB; keep this configurable for future environments."
 }
+variable "ami_id" {
+  type        = string
+  default     = "ami-090d68841c2a28756"
+  description = "Pinned Amazon Linux 2023 AMI for the existing reviewed ShopSphere instance. Update only through a reviewed replacement plan."
+
+  validation {
+    condition     = can(regex("^ami-[0-9a-f]{8,17}$", var.ami_id))
+    error_message = "ami_id must be a valid AMI ID."
+  }
+}
 variable "root_volume_size" {
   type        = number
   default     = 40

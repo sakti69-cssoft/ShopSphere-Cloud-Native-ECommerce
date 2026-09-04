@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew ShopSphere Let's Encrypt certificate
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/shopsphere
+ExecStart=/opt/shopsphere/scripts/renew-tls.sh

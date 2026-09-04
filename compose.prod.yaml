@@ -104,8 +104,11 @@ services:
   nginx:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER}/shopsphere-nginx:${IMAGE_TAG:?Set immutable IMAGE_TAG}
-    ports: ["80:80"]
-    volumes: ["./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro"]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - "${NGINX_CONFIG_FILE:-./nginx/nginx.prod.conf}:/etc/nginx/nginx.conf:ro"
+      - "./runtime/certbot/www:/var/www/certbot:ro"
+      - "./runtime/tls:/etc/nginx/tls:ro"
     depends_on: {gateway: {condition: service_healthy}, frontend: {condition: service_healthy}}
     healthcheck: {test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health | grep healthy"], interval: 10s, timeout: 5s, retries: 20}
 networks:

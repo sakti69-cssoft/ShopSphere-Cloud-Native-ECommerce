@@ -21,3 +21,4 @@ terraform/*.tfvars
 load-tests/results/
 .deployed-tag
 .previous-tag
+runtime/

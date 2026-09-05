@@ -8,6 +8,7 @@ x-app: &app
 services:
   mysql:
     image: mysql:8.4
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       AUTH_DB_NAME: ${AUTH_DB_NAME}
@@ -25,6 +26,7 @@ services:
     deploy: {resources: {limits: {cpus: "1.0", memory: 1G}}}
   mongodb:
     image: mongo:8.0
+    restart: unless-stopped
     environment: {MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USERNAME}", MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD}", MONGO_INITDB_DATABASE: "${PRODUCT_DB_NAME}"}
     volumes: [mongo-data:/data/db]
     networks: [shopsphere]
@@ -32,6 +34,7 @@ services:
     deploy: {resources: {limits: {cpus: "1.0", memory: 768M}}}
   redis:
     image: redis:7.4-alpine
+    restart: unless-stopped
     command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     environment: {REDIS_PASSWORD: "${REDIS_PASSWORD}"}
     volumes: [redis-data:/data]

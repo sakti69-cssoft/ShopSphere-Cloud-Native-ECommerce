@@ -7,6 +7,7 @@ x-app: &app
 services:
   mysql:
     image: mysql:8.4
+    restart: unless-stopped
     profiles: [local, docker, test]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -26,6 +27,7 @@ services:
     deploy: {resources: {limits: {cpus: "1.0", memory: 1G}}}
   mongodb:
     image: mongo:8.0
+    restart: unless-stopped
     profiles: [local, docker, test]
     environment: {MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USERNAME}", MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD}", MONGO_INITDB_DATABASE: "${PRODUCT_DB_NAME}"}
     ports: ["127.0.0.1:27017:27017"]
@@ -35,6 +37,7 @@ services:
     deploy: {resources: {limits: {cpus: "1.0", memory: 768M}}}
   redis:
     image: redis:7.4-alpine
+    restart: unless-stopped
     profiles: [local, docker, test]
     command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     environment: {REDIS_PASSWORD: "${REDIS_PASSWORD}"}

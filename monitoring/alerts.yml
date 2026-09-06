@@ -26,3 +26,28 @@ groups:
         for: 2m
         labels: {severity: warning}
         annotations: {summary: "Gateway downstream failures exceed 1/sec"}
+      - alert: HostHighCpu
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "ShopSphere host CPU exceeds 85% for 10 minutes"}
+      - alert: HostHighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "ShopSphere host memory utilization exceeds 85%"}
+      - alert: HostLowDisk
+        expr: 100 * node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} < 15
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "ShopSphere root filesystem has less than 15% free"}
+      - alert: ContainerHighMemory
+        expr: 100 * container_memory_working_set_bytes{name=~"shopsphere-prod-.+"} / clamp_min(container_spec_memory_limit_bytes{name=~"shopsphere-prod-.+"}, 1) > 90
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Container memory exceeds 90% of its limit: {{ $labels.name }}"}
+      - alert: MonitoringTargetUnavailable
+        expr: up{job=~"node|cadvisor"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Monitoring target unavailable: {{ $labels.job }}"}

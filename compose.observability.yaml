@@ -2,6 +2,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.5.0
     profiles: [observability]
+    restart: unless-stopped
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
     volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro", "./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro", "prometheus-data:/prometheus"]
     ports: ["127.0.0.1:9090:9090"]
@@ -9,9 +10,11 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"], interval: 15s, timeout: 5s, retries: 10}
+    deploy: {resources: {limits: {cpus: "0.5", memory: 512M}}}
   grafana:
     image: grafana/grafana:12.1.1
     profiles: [observability]
+    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD for observability}
@@ -23,6 +26,35 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"], interval: 15s, timeout: 5s, retries: 10}
+    deploy: {resources: {limits: {cpus: "0.5", memory: 384M}}}
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["--path.rootfs=/host", "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)"]
+    volumes: ["/:/host:ro,rslave"]
+    networks: [shopsphere]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9100/metrics"], interval: 15s, timeout: 5s, retries: 10}
+    deploy: {resources: {limits: {cpus: "0.25", memory: 128M}}}
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["--docker_only=true", "--housekeeping_interval=15s", "--store_container_labels=false"]
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker:/var/lib/docker:ro"
+      - "/dev/disk:/dev/disk:ro"
+    devices: ["/dev/kmsg:/dev/kmsg"]
+    networks: [shopsphere]
+    privileged: true
+    healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"], interval: 15s, timeout: 5s, retries: 10}
+    deploy: {resources: {limits: {cpus: "0.5", memory: 256M}}}
 volumes:
   prometheus-data:
   grafana-data:

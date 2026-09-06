@@ -1,0 +1,158 @@
+# ShopSphere Monitoring and Observability
+
+ShopSphere runs a cost-conscious monitoring stack on the existing EC2 host. It creates no AWS service, load balancer, database, or public security-group rule. Prometheus and Grafana bind only to host loopback; Node Exporter and cAdvisor are reachable only on the private Docker network.
+
+## Capacity decision
+
+The 2026-09-06 pre-deployment audit measured:
+
+- EC2: `m7i-flex.large`, 7.6 GiB RAM.
+- Memory: about 2.3 GiB used and 5.1 GiB available.
+- Root disk: 40 GiB, about 7.8 GiB used and 33 GiB available.
+- Load averages: approximately 0.20 / 0.24 / 0.38.
+- Eleven application/data containers healthy.
+
+The monitoring profile adds limits totaling 1.75 vCPU and 1.28 GiB RAM, but these are ceilings rather than reservations. Prometheus retains seven days to constrain disk growth. Re-check `docker stats`, `free -h`, and `df -h` after enabling it.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Node[Node Exporter<br/>host CPU/RAM/disk] --> Prometheus
+  Cadvisor[cAdvisor<br/>container CPU/RAM/I/O] --> Prometheus
+  Apps[Gateway + five services<br/>Actuator/Micrometer] --> Prometheus
+  Prometheus --> Rules[Alert rules]
+  Prometheus --> Grafana[Five provisioned dashboards]
+  Operator[Operator] --> SSM[SSM port forwarding]
+  SSM --> Loopback[127.0.0.1:3001 / 9090]
+  Loopback --> Grafana
+  Loopback --> Prometheus
+```
+
+Scrape targets:
+
+- `shopsphere`: Gateway and five Java services at `/actuator/prometheus`.
+- `node`: Node Exporter for CPU, memory, load, filesystem, and network.
+- `cadvisor`: cAdvisor for per-container CPU, memory, uptime, network, and filesystem activity.
+
+Application Actuator endpoints are not routed by public Nginx. Exporter ports are not published. Grafana `3001` and Prometheus `9090` bind to `127.0.0.1` only.
+
+## Images and containment
+
+- Prometheus: `prom/prometheus:v3.5.0`
+- Grafana: `grafana/grafana:12.1.1`
+- Node Exporter: `quay.io/prometheus/node-exporter:v1.12.1`
+- cAdvisor: `ghcr.io/google/cadvisor:v0.60.5`
+
+All versions are explicit. Prometheus, Grafana, and Node Exporter drop all capabilities and enable `no-new-privileges`. Node Exporter mounts the host root read-only and excludes noisy container filesystems.
+
+cAdvisor requires privileged host visibility plus read-only mounts of the Docker runtime, sysfs, rootfs, and disk metadata. It is not public and has no Docker socket mount, but compromise would still expose host telemetry and broad read access. This is an accepted single-host portfolio trade-off. A production multi-tenant design should run a separately hardened collector or managed agent and isolate the monitoring plane.
+
+## Start or update monitoring
+
+Run through SSM from `/opt/shopsphere`. Never print the environment file.
+
+```bash
+test -s .env.production
+docker compose \
+  --env-file .env.production \
+  -f compose.prod.yaml \
+  -f compose.observability.yaml \
+  --profile observability \
+  config --quiet
+
+docker compose \
+  --env-file .env.production \
+  -f compose.prod.yaml \
+  -f compose.observability.yaml \
+  --profile observability \
+  up -d --wait prometheus grafana node-exporter cadvisor
+```
+
+The production environment must contain a strong `GRAFANA_ADMIN_PASSWORD`. Do not echo it, commit it, or pass it on a command line. If it is absent, generate it directly on the instance and store it mode `0600` before starting Grafana.
+
+The command creates only local Docker monitoring containers and named data volumes. It does not restart MySQL, MongoDB, Redis, or application containers.
+
+## Secure operator access
+
+Use SSM port forwarding rather than a public Grafana rule:
+
+```bash
+aws ssm start-session \
+  --target i-0e2cf0109097385b1 \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}' \
+  --profile shopsphere \
+  --region ap-south-1
+```
+
+Open `http://127.0.0.1:3001` locally and authenticate with the instance-stored Grafana administrator credential. Use the same pattern with port `9090` only for Prometheus troubleshooting. Do not add security-group ingress for 3000, 3001, 8080–8085, 9090, or 9100.
+
+## Dashboards
+
+Grafana provisions five dashboards from version-controlled JSON:
+
+1. **ShopSphere Overview** — service availability, request rate, p95 latency, Gateway routes, heap, threads, CPU, 5xx, and circuit breakers.
+2. **ShopSphere Host / EC2** — host CPU, memory, root disk, load, and network.
+3. **ShopSphere Containers** — per-container CPU, memory/limit, uptime, network, and filesystem writes.
+4. **ShopSphere JVM / Microservices** — heap utilization, threads, process CPU, GC pauses, classes, and uptime.
+5. **ShopSphere HTTP / API** — throughput, 5xx ratio, p95 latency, status codes, Gateway routes, and circuit breakers.
+
+Empty rate panels immediately after startup are normal; generate representative requests and wait for at least two scrape intervals.
+
+## Alert rules
+
+Prometheus evaluates rules every 15 seconds:
+
+| Alert | Condition | Purpose |
+|---|---|---|
+| `ServiceUnavailable` | Java scrape target down for 2 minutes | Detect service/metrics endpoint loss |
+| `HighErrorRate` | HTTP 5xx ratio over 5% for 5 minutes | RED error signal |
+| `HighLatency` | p95 over 2 seconds for 5 minutes | RED latency signal |
+| `HighJvmHeap` | heap over 85% for 10 minutes | JVM pressure |
+| `GatewayFailureSpike` | downstream 5xx over 1/sec | Edge dependency issue |
+| `HostHighCpu` | CPU busy over 85% for 10 minutes | USE saturation signal |
+| `HostHighMemory` | memory used over 85% for 10 minutes | OOM risk |
+| `HostLowDisk` | root free space below 15% for 10 minutes | Database/build write risk |
+| `ContainerHighMemory` | working set over 90% of limit for 10 minutes | Container limit risk |
+| `MonitoringTargetUnavailable` | Node Exporter/cAdvisor down for 2 minutes | Telemetry blind spot |
+
+These thresholds are initial portfolio values, not proven SLOs. Tune them using observed production traffic.
+
+No Alertmanager receiver is configured because no approved email/Slack/PagerDuty credential exists. Rules still appear in Prometheus/Grafana. Adding notifications requires a separately provided destination secret stored outside Git.
+
+## Validation
+
+```bash
+docker compose --env-file .env.production -f compose.prod.yaml -f compose.observability.yaml --profile observability ps
+curl -fsS http://127.0.0.1:9090/-/healthy
+curl -fsS http://127.0.0.1:3001/api/health
+curl -fsS http://127.0.0.1:9090/api/v1/targets
+curl -fsS http://127.0.0.1:9090/api/v1/rules
+docker stats --no-stream
+df -h /
+free -h
+```
+
+Healthy means all four monitoring containers are running/healthy, all eight scrape targets are up, alert rules load without errors, and the existing eleven application/data containers remain healthy.
+
+## Troubleshooting
+
+- **Prometheus target down:** check Docker DNS/network, target container health, and the internal Actuator/exporter endpoint.
+- **Grafana panel empty:** confirm datasource health, query labels, time range, and at least two scrapes.
+- **High host memory:** identify consumers with `docker stats --no-stream`; do not restart databases blindly.
+- **Low disk:** inspect Prometheus retention and Docker image/log usage. Never delete database volumes.
+- **cAdvisor unhealthy:** inspect bounded logs and required read-only mounts/device; do not expose its port.
+- **Alert not firing:** verify the expression in Prometheus, rule state, `for` duration, and metric labels.
+
+Prometheus and Grafana data use separate named volumes. Their loss would remove monitoring history/dashboards state, not ShopSphere business data; provisioned dashboards remain in Git.
+
+## Current limitations
+
+- Single-host monitoring shares failure and resource domains with the application.
+- No external Alertmanager notification destination.
+- No distributed tracing or centralized long-term logs.
+- Seven-day local Prometheus retention is not disaster recovery.
+- cAdvisor's privileged access is a documented risk.
+- EC2 stop pauses all monitoring until the host restarts; restart policies restore containers when monitoring has previously been deployed.
+

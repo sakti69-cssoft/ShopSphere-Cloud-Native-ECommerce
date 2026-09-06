@@ -11,6 +11,23 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  repository:
+    name: Repository and Compose validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate shell deployment scripts
+        run: bash -n scripts/*.sh
+      - name: Validate secret hygiene
+        run: node scripts/check-secrets.mjs
+      - name: Validate production Compose model
+        run: >-
+          docker compose --env-file .env.production.example
+          -f compose.prod.yaml -f compose.aws-build.yaml
+          config --quiet
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -52,7 +69,7 @@ jobs:
     uses: ./.github/workflows/terraform.yml
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [frontend, backend, security, terraform]
+    needs: [repository, frontend, backend, security, terraform]
     permissions:
       contents: read
       packages: write

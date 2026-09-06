@@ -4,8 +4,8 @@ This ledger records evidence for the production-operations work performed agains
 
 | Phase | Status | Changes | Tests | Commit | Production status | Notes |
 |---|---|---|---|---|---|---|
-| 4 — Production Operations | Complete | Read-only production audit and comprehensive operator runbook | AWS/SSM inventory passed; 11/11 containers healthy; HTTPS, Nginx health and products API HTTP 200; secret hygiene passed | This phase commit (see Git history) | Healthy | Existing EC2/EBS/EIP preserved; Soundbox stopped |
-| 5 — CI/CD | Pending | — | — | — | Unchanged | Audit existing workflows before implementation |
+| 4 — Production Operations | Complete | Read-only production audit and comprehensive operator runbook | AWS/SSM inventory passed; 11/11 containers healthy; HTTPS, Nginx health and products API HTTP 200; secret hygiene passed | `61fa1e8456141361ef6838cd208eed4965f9433d` | Healthy | Existing EC2/EBS/EIP preserved; Soundbox stopped |
+| 5 — CI/CD | Complete (configuration) | Compose/shell CI gate; approval-gated OIDC/SSM deploy workflow; exact-revision deploy and rollback script; CI/CD guide | Bash syntax, Compose model, workflow YAML and secret hygiene passed locally | This phase commit (see Git history) | Unchanged; deployment not run | OIDC role/GitHub Environment require reviewed external setup; image publication currently blocked by Phase 8 vulnerability gate |
 | 6 — Monitoring & Observability | Pending | — | — | — | Unchanged | Measure host capacity before enabling containers |
 | 7 — Backup & Recovery | Pending | — | — | — | Unchanged | Restore test must use isolated databases |
 | 8 — DevSecOps Hardening | Pending | — | — | — | Unchanged | Findings will be classified by severity |

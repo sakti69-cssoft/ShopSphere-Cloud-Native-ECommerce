@@ -136,6 +136,8 @@ free -h
 
 Healthy means all four monitoring containers are running/healthy, all eight scrape targets are up, alert rules load without errors, and the existing eleven application/data containers remain healthy.
 
+The first production scrape audit found Product Service returning HTTP 401 for its internal Prometheus endpoint while its health and customer APIs remained healthy. Its security allow-list now permits only `/actuator/health` and `/actuator/prometheus` without a JWT; public Nginx still does not route either Actuator path. After the targeted Product Service rebuild, all eight Prometheus targets must report `up`.
+
 ## Troubleshooting
 
 - **Prometheus target down:** check Docker DNS/network, target container health, and the internal Actuator/exporter endpoint.
@@ -155,4 +157,3 @@ Prometheus and Grafana data use separate named volumes. Their loss would remove 
 - Seven-day local Prometheus retention is not disaster recovery.
 - cAdvisor's privileged access is a documented risk.
 - EC2 stop pauses all monitoring until the host restarts; restart policies restore containers when monitoring has previously been deployed.
-

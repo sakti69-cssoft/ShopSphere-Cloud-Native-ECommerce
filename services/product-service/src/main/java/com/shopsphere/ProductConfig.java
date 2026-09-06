@@ -28,7 +28,7 @@ class ProductConfig {
     roles.setJwtGrantedAuthoritiesConverter(jwt -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_"+jwt.getClaimAsString("role"))));
     return http.csrf(csrf -> csrf.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/actuator/health","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html").permitAll()
+            .requestMatchers("/actuator/health","/actuator/prometheus","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html").permitAll()
             .requestMatchers(HttpMethod.GET,"/api/products/wishlist").authenticated()
             .requestMatchers(HttpMethod.POST,"/api/products/wishlist/**","/api/products/*/reviews").authenticated()
             .requestMatchers(HttpMethod.PUT,"/api/products/*/reviews/*").authenticated()

@@ -115,11 +115,17 @@ gzip -t "$backup_dir/mysql.sql.gz"
 gzip -t "$backup_dir/mongodb.archive.gz"
 format_version=$(awk -F= '$1 == "format_version" { print $2 }' "$backup_dir/METADATA")
 schema_profile=$(awk -F= '$1 == "schema_profile" { print $2 }' "$backup_dir/METADATA")
-[[ $format_version == 1 && $schema_profile == shopsphere-production-v1 ]] || {
+[[ $format_version =~ ^[12]$ && $schema_profile == shopsphere-production-v1 ]] || {
   echo "Unsupported backup metadata format or schema profile" >&2
   exit 1
 }
 echo "Backup integrity checks passed."
+if [[ $format_version == 2 ]]; then
+  for file in mysql-records.tsv mongodb-records.tsv; do
+    [[ -f $backup_dir/$file && ! -L $backup_dir/$file ]] || exit 1
+    verify_checksum "$file"
+  done
+fi
 
 wait_for_mysql() {
   local container=$1
@@ -311,6 +317,19 @@ restore_test() {
       }
   done
   echo "MongoDB restore verified: $mongo_database_count database, $mongo_collection_count collections, $mongo_document_count documents."
+  if [[ $format_version == 2 ]]; then
+    bash "$script_dir/backup-record-fingerprints.sh" mysql "$test_mysql_container" "$restored_mysql_manifest" >"$test_work_dir/mysql-records.tsv"
+    bash "$script_dir/backup-record-fingerprints.sh" mongodb "$test_mongo_container" "$restored_mongo_manifest" >"$test_work_dir/mongodb-records.tsv"
+    for engine in mysql mongodb; do
+      if ! cmp -s "$backup_dir/$engine-records.tsv" "$test_work_dir/$engine-records.tsv"; then
+        echo "$engine restored record content differs from the backup fingerprint" >&2
+        return 1
+      fi
+    done
+    echo "Record-content fingerprints matched for every backed-up table and collection."
+  else
+    echo "Legacy v1 backup: counts verified; content fingerprints unavailable."
+  fi
   echo "Isolated restore test passed; production databases and volumes were not touched."
   cleanup_test
   trap - EXIT INT TERM

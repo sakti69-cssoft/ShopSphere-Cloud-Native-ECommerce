@@ -36,6 +36,8 @@ runtime/backups/20260906T120000Z/
   mysql-counts.tsv
   mongodb.archive.gz
   mongodb-counts.tsv
+  mysql-records.tsv
+  mongodb-records.tsv
 ```
 
 The scripts set a `077` umask, directories to mode `0700`, and files to mode
@@ -104,6 +106,14 @@ Test mode:
 It does not connect to, stop, write to, or recreate the production database
 containers or named volumes. The Docker host may pull the two versioned database
 images if they are not already cached.
+
+Format v2 additionally fingerprints all record content while application writes
+are quiet. MySQL rows are dumped in primary-key order; MongoDB documents use
+canonical Extended JSON in `_id` order. Only SHA-256 fingerprints are retained
+in the manifests, and no record contents are printed. Isolated restores must
+match these fingerprints as well as row counts, covering representative records
+and every other record in the backup. Empty collections are included. Format v1
+backups remain readable but explicitly report that content fingerprints are unavailable.
 
 ## Controlled production recovery
 

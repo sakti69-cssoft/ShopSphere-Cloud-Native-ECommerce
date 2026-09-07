@@ -272,6 +272,10 @@ for collection in products reviews wishlists; do
   require_object "$incomplete_dir/mongodb-counts.tsv" "$collection" "MongoDB collection"
 done
 
+echo "Fingerprinting database content without exporting records to logs..."
+bash "$script_dir/backup-record-fingerprints.sh" mysql "$("${compose[@]}" ps -q mysql)" "$incomplete_dir/mysql-counts.tsv" >"$incomplete_dir/mysql-records.tsv"
+bash "$script_dir/backup-record-fingerprints.sh" mongodb "$("${compose[@]}" ps -q mongodb)" "$incomplete_dir/mongodb-counts.tsv" >"$incomplete_dir/mongodb-records.tsv"
+
 # End the brief write quiescence before compression/checksum housekeeping.
 restart_quiesced_apps
 
@@ -279,7 +283,7 @@ gzip -t "$incomplete_dir/mysql.sql.gz"
 gzip -t "$incomplete_dir/mongodb.archive.gz"
 
 cat >"$incomplete_dir/METADATA" <<EOF
-format_version=1
+format_version=2
 schema_profile=shopsphere-production-v1
 created_at_utc=$timestamp
 mysql_format=mysqldump-sql-gzip
@@ -290,7 +294,7 @@ EOF
 chmod 0600 "$incomplete_dir"/*
 (
   cd -- "$incomplete_dir"
-  sha256sum METADATA mysql.sql.gz mongodb.archive.gz mysql-counts.tsv mongodb-counts.tsv >SHA256SUMS
+  sha256sum METADATA mysql.sql.gz mongodb.archive.gz mysql-counts.tsv mongodb-counts.tsv mysql-records.tsv mongodb-records.tsv >SHA256SUMS
 )
 chmod 0600 "$incomplete_dir/SHA256SUMS"
 

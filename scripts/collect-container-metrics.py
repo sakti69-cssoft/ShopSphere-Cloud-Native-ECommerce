@@ -57,7 +57,9 @@ def collect():
             lines.append(metric("container_memory_working_set_bytes", memory_bytes(used), name))
             lines.append(metric("container_spec_memory_limit_bytes", memory_bytes(limit), name))
             lines.append(metric("shopsphere_container_cpu_percent", float(sample["CPUPerc"].rstrip("%")), name))
-            started = datetime.datetime.fromisoformat(state["started"].replace("Z", "+00:00")).timestamp()
+            # AL2023 Python 3.9 requires at most microsecond precision.
+            timestamp = re.sub(r"(\.\d{6})\d+(?=[+-])", r"\1", state["started"].replace("Z", "+00:00"))
+            started = datetime.datetime.fromisoformat(timestamp).timestamp()
             lines.append(metric("container_start_time_seconds", started, name))
     lines.append(metric("shopsphere_container_metrics_timestamp_seconds", time.time()))
     return "".join(lines)

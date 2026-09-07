@@ -15,4 +15,3 @@ ProtectHome=true
 PrivateTmp=true
 ReadWritePaths=/opt/shopsphere/runtime/metrics
 RestrictAddressFamilies=AF_UNIX
-

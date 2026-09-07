@@ -1,5 +1,23 @@
 # Deployment runbook
-No cloud deployment has been performed. These scripts prepare an operator-driven single-host demo. Do not expose real customer/payment data over HTTP.
+ShopSphere is deployed on existing EC2 `i-0e2cf0109097385b1` in `ap-south-1`, with EIP `65.2.225.30` and encrypted root EBS `vol-0ed9fa47e65c3fd84`. Use SSM with the `shopsphere` profile. Soundbox is separate and remains stopped. Current application images are the scanned SHA `5d3259f69b91d6d18f405756ce87a333aadcaa20`.
+
+## Existing production host
+
+Public URL: https://shopsphere-sakti.duckdns.org. Eleven application/data and three monitoring containers were verified healthy. The existing checkout is `/opt/shopsphere`; `.env.production` and runtime TLS directories are host-local and preserved.
+
+The checkout contains historical reviewed local changes, so do not blindly reset it or use a checkout-based deployment script until those differences are reconciled. Phase 8 compared runtime source against reviewed Git objects, pulled all eight scanned images, recorded each prior image for rollback, changed only image owner/tag in the existing environment, and reconciled only the eight application services with `--no-deps --wait`. Database container IDs and mounts remained identical.
+
+For normal operation, inspect configuration without printing secrets:
+
+```bash
+cd /opt/shopsphere
+docker compose --env-file .env.production -f compose.prod.yaml config --quiet
+docker compose --env-file .env.production -f compose.prod.yaml ps
+docker exec shopsphere-prod-nginx-1 nginx -t
+curl -fsS -o /dev/null https://shopsphere-sakti.duckdns.org/nginx-health
+```
+
+Retain monitoring containers when reconciling the application-only file: do not use `--remove-orphans`. Use the observability override when managing monitoring. A normal application deploy can briefly interrupt this single-host site; it is not zero-downtime deployment. Review migration compatibility and take a backup before schema changes.
 
 ## Local development
 ```powershell
@@ -13,7 +31,7 @@ npm run dev
 ```
 Open http://localhost:3000. API entry: http://localhost/api/v1. Avoid displaying interpolated compose config in logs; use --quiet. Local service/database ports should be restricted to loopback.
 
-## Later, on an explicitly provisioned AL2023 host
+## Fresh host reference (not a routine production update)
 Copy this repository (or a reviewed release) without development secrets. Install Docker with sudo bash scripts/install-docker.sh. Use at least 8 GiB RAM and adequate disk. Set database names/users, random passwords, GHCR_OWNER, full IMAGE_TAG and FRONTEND_ORIGIN in a secure operator environment, then:
 ```sh
 bash scripts/create-production-env.sh
@@ -25,7 +43,7 @@ bash scripts/deploy.sh restart
 bash scripts/deploy.sh rollback
 bash scripts/deploy.sh stop
 ```
-Production Compose publishes only Nginx port 80. HTTPS needs a separately configured certificate/domain and Nginx TLS listener; no self-signed or fabricated deployment is supplied. Do not enable public traffic with real credentials before TLS.
+Production Compose publishes only Nginx ports 80/443. The existing hostname uses Let's Encrypt, persistent read-only TLS mounts and automatic renewal. Preserve those runtime paths and use the TLS runbook for initial issuance.
 
 The env creation script refuses overwrite and uses mode 0600, validates required values and suppresses secret output. Mongo credentials in connection strings must be URI-safe (random hex is convenient). Existing database users/passwords are initialized only on first volume creation; changing .env does not rotate stored database credentials.
 

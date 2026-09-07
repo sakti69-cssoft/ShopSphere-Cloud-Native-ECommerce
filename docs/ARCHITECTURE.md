@@ -3,7 +3,11 @@ ShopSphere is a portfolio-scale, synchronous microservice marketplace, not a pro
 
 ```mermaid
 flowchart LR
- B[Browser] --> N[Nginx]
+ B[Browser] --> DNS[DuckDNS]
+ DNS --> EIP[Elastic IP]
+ EIP --> SG[AWS SG: 80/443]
+ SG --> EC2[Existing EC2 / Docker]
+ EC2 --> N[Nginx HTTPS]
  N --> F[Next.js frontend]
  N --> G[Spring Cloud Gateway]
  G --> A[Auth]
@@ -22,7 +26,7 @@ flowchart LR
  O --> I
 ```
 
-Local development serves Next.js on :3000 and API requests through Nginx :80. Production Compose serves both from Nginx, with a relative /api/v1 base URL. The gateway validates access JWTs, enforces roles, rate limits, timeouts and correlation IDs. Cart/order also validate tokens and ownership.
+Local development serves Next.js on :3000 and API requests through Nginx :80. Production Compose serves both through trusted HTTPS, with a relative /api/v1 base URL. The gateway validates access JWTs, enforces roles, rate limits, timeouts and correlation IDs. Cart/order also validate tokens and ownership.
 
 | Service | Port (internal) | Store | Responsibility |
 |---|---:|---|---|

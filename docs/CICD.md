@@ -50,7 +50,16 @@ The Compose check uses `.env.production.example` and `config --quiet`, so it val
 
 Each image is tagged `ghcr.io/OWNER/shopsphere-SERVICE:<full-git-sha>`. Trivy scans the exact built image before registry login/push, and an SBOM is uploaded. `latest` is convenience metadata; production deploys only the immutable SHA.
 
-The 2026-09-06 audit confirmed frontend, all six Maven jobs, Terraform validation, and repository security passed on GitHub. The image matrix was blocked by its HIGH/CRITICAL vulnerability gate; remediation and accepted-risk handling belong to Phase 8. No image or deployment success is claimed while that gate is red.
+The initial image gate blocked publication. Phase 8 fixed the observed findings;
+CI run 34101039768 passed all checks and published all eight images at `5d3259f`.
+Those images were deployed through a reviewed operator SSM command and verified
+healthy on 2026-09-07. The GitHub OIDC deployment workflow remains configuration
+only until its IAM role and Environment are set up and exercised.
+
+The production checkout contains historical reviewed local modifications.
+Do not invoke the checkout-based deploy script blindly: first reconcile those
+changes. The verified Phase 8 operator deployment recorded each previous image,
+preserved environment/TLS/data, and changed only the eight application containers.
 
 ### Production deployment
 

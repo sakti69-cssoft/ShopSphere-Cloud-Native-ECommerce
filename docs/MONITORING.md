@@ -169,7 +169,7 @@ targets are up, twelve rules load, and the eleven application/data containers
 remain healthy. Also check `systemctl status shopsphere-container-metrics.timer`
 and the `shopsphere_container_metrics_timestamp_seconds` metric.
 
-The first production scrape audit found Product Service returning HTTP 401 for its internal Prometheus endpoint while its health and customer APIs remained healthy. Its security allow-list now permits only `/actuator/health` and `/actuator/prometheus` without a JWT; public Nginx still does not route either Actuator path. After the targeted Product Service rebuild, all eight Prometheus targets must report `up`.
+The first production scrape audit found Product Service returning HTTP 401 for its internal Prometheus endpoint while its health and customer APIs remained healthy. Its security allow-list now permits only `/actuator/health` and `/actuator/prometheus` without a JWT; public Nginx still does not route either Actuator path. The original eight targets were healthy after that fix. Phase 8 removed cAdvisor: the current seven targets are verified up, with container metrics delivered through Node Exporter instead.
 
 ## Troubleshooting
 

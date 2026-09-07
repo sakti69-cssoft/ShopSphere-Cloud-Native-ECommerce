@@ -1,6 +1,10 @@
 # ShopSphere Monitoring and Observability
 
-ShopSphere runs a cost-conscious monitoring stack on the existing EC2 host. It creates no AWS service, load balancer, database, or public security-group rule. Prometheus and Grafana bind only to host loopback; Node Exporter and cAdvisor are reachable only on the private Docker network.
+ShopSphere runs Prometheus, Grafana and Node Exporter on the existing EC2 host.
+Prometheus and Grafana bind only to loopback. Node Exporter is reachable only on
+the private Docker network. A systemd timer collects selected Docker statistics
+on the host and atomically writes a metrics file for Node Exporter; collector
+containers do not receive the Docker socket.
 
 ## Capacity decision
 
@@ -12,14 +16,18 @@ The 2026-09-06 pre-deployment audit measured:
 - Load averages: approximately 0.20 / 0.24 / 0.38.
 - Eleven application/data containers healthy.
 
-The monitoring profile adds limits totaling 1.75 vCPU and 1.28 GiB RAM, but these are ceilings rather than reservations. Prometheus retains seven days to constrain disk growth. Re-check `docker stats`, `free -h`, and `df -h` after enabling it.
+The monitoring profile limits total 1.25 vCPU and 1 GiB RAM; these are ceilings,
+not reservations. Prometheus retains seven days. Re-check resource consumption
+after deployment. Removing cAdvisor reduces the steady-state total to fourteen
+containers: eleven application/data containers and three monitoring containers.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   Node[Node Exporter<br/>host CPU/RAM/disk] --> Prometheus
-  Cadvisor[cAdvisor<br/>container CPU/RAM/I/O] --> Prometheus
+  Timer[Host timer<br/>Docker statistics] --> File[Atomic metrics file]
+  File --> Node
   Apps[Gateway + five services<br/>Actuator/Micrometer] --> Prometheus
   Prometheus --> Rules[Alert rules]
   Prometheus --> Grafana[Five provisioned dashboards]
@@ -33,7 +41,8 @@ Scrape targets:
 
 - `shopsphere`: Gateway and five Java services at `/actuator/prometheus`.
 - `node`: Node Exporter for CPU, memory, load, filesystem, and network.
-- `cadvisor`: cAdvisor for per-container CPU, memory, uptime, network, and filesystem activity.
+- Node Exporter's textfile collector adds CPU, memory, restart count, uptime and
+  health for containers bearing the ShopSphere Compose project label.
 
 Application Actuator endpoints are not routed by public Nginx. Exporter ports are not published. Grafana `3001` and Prometheus `9090` bind to `127.0.0.1` only.
 
@@ -42,13 +51,32 @@ Application Actuator endpoints are not routed by public Nginx. Exporter ports ar
 - Prometheus: `prom/prometheus:v3.5.0`
 - Grafana: `grafana/grafana:12.1.1`
 - Node Exporter: `quay.io/prometheus/node-exporter:v1.12.1`
-- cAdvisor: `ghcr.io/google/cadvisor:v0.60.5`
 
 All versions are explicit. Prometheus, Grafana, and Node Exporter drop all capabilities and enable `no-new-privileges`. Node Exporter mounts the host root read-only and excludes noisy container filesystems.
 
-cAdvisor requires privileged host visibility plus read-only mounts of the Docker runtime, sysfs, rootfs, and disk metadata. It is not public and has no Docker socket mount, but compromise would still expose host telemetry and broad read access. This is an accepted single-host portfolio trade-off. A production multi-tenant design should run a separately hardened collector or managed agent and isolate the monitoring plane.
+cAdvisor was removed after review found that its privileged `/var/run` mount
+exposed the Docker socket. Read-only bind mounts do not restrict socket API
+operations. Its replacement is a root-owned host timer, constrained with a
+read-only filesystem, explicit metrics write directory, private temporary
+directory, and Unix sockets only. It queries selected state/statistics fields,
+never container environments or healthcheck output. Node Exporter's read-only
+host view masks `/host/run` with an empty tmpfs to hide host runtime sockets.
+
+The timer runs every thirty seconds. On collection failure it preserves the
+previous complete metrics file; a freshness alert detects stale data. Docker
+stats memory values are rounded and CPU is an instantaneous percentage, not a
+cumulative CPU counter. Per-container network/disk rates are no longer reported.
 
 ## Start or update monitoring
+
+Install `scripts/collect-container-metrics.py` and the two units in
+`monitoring/systemd/` as root-owned files. Provision
+`/opt/shopsphere/runtime/metrics` as mode 0755, copy units to
+`/etc/systemd/system`, run `systemctl daemon-reload`, then enable/start
+`shopsphere-container-metrics.timer` and start the service once. Check successful
+collection before updating Node Exporter. During migration remove only the
+retired `shopsphere-prod-cadvisor-1` container after inspecting its name and
+Compose project label; do not use global orphan removal or volume deletion.
 
 Run through SSM from `/opt/shopsphere`. Never print the environment file.
 
@@ -66,7 +94,7 @@ docker compose \
   -f compose.prod.yaml \
   -f compose.observability.yaml \
   --profile observability \
-  up -d --wait prometheus grafana node-exporter cadvisor
+  up -d --wait prometheus grafana node-exporter
 ```
 
 The production environment must contain a strong `GRAFANA_ADMIN_PASSWORD`. Do not echo it, commit it, or pass it on a command line. If it is absent, generate it directly on the instance and store it mode `0600` before starting Grafana.
@@ -115,7 +143,9 @@ Prometheus evaluates rules every 15 seconds:
 | `HostHighMemory` | memory used over 85% for 10 minutes | OOM risk |
 | `HostLowDisk` | root free space below 15% for 10 minutes | Database/build write risk |
 | `ContainerHighMemory` | working set over 90% of limit for 10 minutes | Container limit risk |
-| `MonitoringTargetUnavailable` | Node Exporter/cAdvisor down for 2 minutes | Telemetry blind spot |
+| `MonitoringTargetUnavailable` | Node Exporter down for 2 minutes | Telemetry blind spot |
+| `ContainerMetricsStale` | metrics file missing or older than 120 seconds | Host timer failure |
+| `ContainerUnhealthy` | container health fails for 2 minutes | Includes database health |
 
 These thresholds are initial portfolio values, not proven SLOs. Tune them using observed production traffic.
 
@@ -134,7 +164,10 @@ df -h /
 free -h
 ```
 
-Healthy means all four monitoring containers are running/healthy, all eight scrape targets are up, alert rules load without errors, and the existing eleven application/data containers remain healthy.
+Healthy means all three monitoring containers are healthy, all seven scrape
+targets are up, twelve rules load, and the eleven application/data containers
+remain healthy. Also check `systemctl status shopsphere-container-metrics.timer`
+and the `shopsphere_container_metrics_timestamp_seconds` metric.
 
 The first production scrape audit found Product Service returning HTTP 401 for its internal Prometheus endpoint while its health and customer APIs remained healthy. Its security allow-list now permits only `/actuator/health` and `/actuator/prometheus` without a JWT; public Nginx still does not route either Actuator path. After the targeted Product Service rebuild, all eight Prometheus targets must report `up`.
 
@@ -144,7 +177,7 @@ The first production scrape audit found Product Service returning HTTP 401 for i
 - **Grafana panel empty:** confirm datasource health, query labels, time range, and at least two scrapes.
 - **High host memory:** identify consumers with `docker stats --no-stream`; do not restart databases blindly.
 - **Low disk:** inspect Prometheus retention and Docker image/log usage. Never delete database volumes.
-- **cAdvisor unhealthy:** inspect bounded logs and required read-only mounts/device; do not expose its port.
+- **Container telemetry stale:** inspect the timer/service journal; confirm Docker is active and the metrics directory is writable by the host collector.
 - **Alert not firing:** verify the expression in Prometheus, rule state, `for` duration, and metric labels.
 
 Prometheus and Grafana data use separate named volumes. Their loss would remove monitoring history/dashboards state, not ShopSphere business data; provisioned dashboards remain in Git.
@@ -155,5 +188,5 @@ Prometheus and Grafana data use separate named volumes. Their loss would remove 
 - No external Alertmanager notification destination.
 - No distributed tracing or centralized long-term logs.
 - Seven-day local Prometheus retention is not disaster recovery.
-- cAdvisor's privileged access is a documented risk.
+- The root host collector needs Docker administration access; keep its script and unit files root-owned and not writable by application containers.
 - EC2 stop pauses all monitoring until the host restarts; restart policies restore containers when monitoring has previously been deployed.

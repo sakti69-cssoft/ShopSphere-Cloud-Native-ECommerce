@@ -20,9 +20,11 @@ jobs:
         with:
           node-version: '22'
       - name: Validate shell deployment scripts
-        run: bash -n scripts/*.sh
+        run: for script in scripts/*.sh; do bash -n "$script"; done
       - name: Validate secret hygiene
         run: node scripts/check-secrets.mjs
+      - name: Test container telemetry collector
+        run: python3 scripts/test_container_metrics.py
       - name: Validate production Compose model
         run: >-
           docker compose --env-file .env.production.example

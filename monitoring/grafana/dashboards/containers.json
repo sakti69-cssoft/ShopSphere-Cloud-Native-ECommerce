@@ -26,7 +26,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by(name) (rate(container_cpu_usage_seconds_total{name=~\"shopsphere-prod-.+\"}[5m])) * 100",
+          "expr": "shopsphere_container_cpu_percent",
           "legendFormat": "{{name}}"
         }
       ],
@@ -124,7 +124,7 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Network receive",
+      "title": "Container health (1 = healthy)",
       "gridPos": {
         "x": 0,
         "y": 16,
@@ -138,13 +138,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by(name) (rate(container_network_receive_bytes_total{name=~\"shopsphere-prod-.+\"}[5m]))",
+          "expr": "shopsphere_container_healthy",
           "legendFormat": "{{name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "none"
         },
         "overrides": []
       }
@@ -152,7 +152,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Filesystem writes",
+      "title": "Container restart count",
       "gridPos": {
         "x": 12,
         "y": 16,
@@ -166,13 +166,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by(name) (rate(container_fs_writes_bytes_total{name=~\"shopsphere-prod-.+\"}[5m]))",
+          "expr": "shopsphere_container_restarts_total",
           "legendFormat": "{{name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "none"
         },
         "overrides": []
       }

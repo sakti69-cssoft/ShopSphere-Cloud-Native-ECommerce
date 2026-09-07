@@ -47,7 +47,17 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "Container memory exceeds 90% of its limit: {{ $labels.name }}"}
       - alert: MonitoringTargetUnavailable
-        expr: up{job=~"node|cadvisor"} == 0
+        expr: up{job="node"} == 0
         for: 2m
         labels: {severity: warning}
         annotations: {summary: "Monitoring target unavailable: {{ $labels.job }}"}
+      - alert: ContainerMetricsStale
+        expr: time() - shopsphere_container_metrics_timestamp_seconds > 120 or absent(shopsphere_container_metrics_timestamp_seconds)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Host container metrics collector stopped updating"}
+      - alert: ContainerUnhealthy
+        expr: shopsphere_container_healthy == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "ShopSphere container unhealthy: {{ $labels.name }}"}

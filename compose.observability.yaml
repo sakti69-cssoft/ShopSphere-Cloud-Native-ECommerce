@@ -31,30 +31,15 @@ services:
     image: quay.io/prometheus/node-exporter:v1.12.1
     profiles: [observability]
     restart: unless-stopped
-    command: ["--path.rootfs=/host", "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)"]
-    volumes: ["/:/host:ro,rslave"]
+    command: ["--path.rootfs=/host", "--collector.textfile.directory=/metrics", "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)"]
+    volumes: ["/:/host:ro,rslave", "./runtime/metrics:/metrics:ro"]
+    tmpfs: ["/host/run:rw,nosuid,nodev,noexec,size=64k"]
     networks: [shopsphere]
     read_only: true
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9100/metrics"], interval: 15s, timeout: 5s, retries: 10}
     deploy: {resources: {limits: {cpus: "0.25", memory: 128M}}}
-  cadvisor:
-    image: ghcr.io/google/cadvisor:v0.60.5
-    profiles: [observability]
-    restart: unless-stopped
-    command: ["--docker_only=true", "--housekeeping_interval=15s", "--store_container_labels=false"]
-    volumes:
-      - "/:/rootfs:ro"
-      - "/var/run:/var/run:ro"
-      - "/sys:/sys:ro"
-      - "/var/lib/docker:/var/lib/docker:ro"
-      - "/dev/disk:/dev/disk:ro"
-    devices: ["/dev/kmsg:/dev/kmsg"]
-    networks: [shopsphere]
-    privileged: true
-    healthcheck: {test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"], interval: 15s, timeout: 5s, retries: 10}
-    deploy: {resources: {limits: {cpus: "0.5", memory: 256M}}}
 volumes:
   prometheus-data:
   grafana-data:

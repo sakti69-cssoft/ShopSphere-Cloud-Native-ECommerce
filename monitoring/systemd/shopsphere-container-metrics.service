@@ -1,0 +1,18 @@
+[Unit]
+Description=Collect ShopSphere container metrics without container socket mounts
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/shopsphere/scripts/collect-container-metrics.py /opt/shopsphere/runtime/metrics
+User=root
+UMask=0022
+TimeoutStartSec=60
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/shopsphere/runtime/metrics
+RestrictAddressFamilies=AF_UNIX
+

@@ -8,6 +8,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_BASE_URL=/api/v1
 RUN npm run build
 FROM node:22-alpine AS runtime
+RUN apk upgrade --no-cache && npm uninstall --global npm
 WORKDIR /app
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 NEXT_TELEMETRY_DISABLED=1
 COPY --from=build --chown=node:node /app/.next/standalone ./

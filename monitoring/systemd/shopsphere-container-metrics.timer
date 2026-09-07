@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh ShopSphere container telemetry every 30 seconds
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=1
+Unit=shopsphere-container-metrics.service
+
+[Install]
+WantedBy=timers.target

@@ -5,6 +5,7 @@ COPY src src
 ARG MAVEN_OPTS
 RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
 FROM eclipse-temurin:21-jre-alpine
+RUN apk upgrade --no-cache
 RUN addgroup -S shopsphere && adduser -S shopsphere -G shopsphere
 USER shopsphere
 WORKDIR /app

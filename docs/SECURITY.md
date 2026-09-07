@@ -56,6 +56,19 @@ scan is not a permanent assurance.
 - No external alert receiver, automated penetration test, compliance assessment,
   or successful OIDC production workflow is claimed.
 
-Do not describe Phase 8 as complete until the final CI scans, runtime deployment,
-telemetry containment, and public health checks have been recorded in the phase
-status ledger.
+## Verified deployment evidence
+
+CI run [34101039768](https://github.com/sakti69-cssoft/ShopSphere-Cloud-Native-ECommerce/actions/runs/34101039768)
+passed all eight application image scan/publication gates for `5d3259f`.
+The gate rejects fixable HIGH/CRITICAL findings; this does not assert zero
+lower-severity or unfixed vulnerabilities.
+
+On 2026-09-07, SSM command `046bdfe3-58a5-4cbd-87dc-5bdbbb46fcf7`
+deployed those eight images. All 14 containers were healthy, all seven
+Prometheus targets were up, and 12 rules were loaded. Every container reported
+`privileged=false`; application containers used non-root users. The collector
+timer was active. Public HTTPS `/`, `/nginx-health`, and `/api/v1/products`
+returned 200. Database container IDs and mounts were unchanged; counts remained
+41 products, 41 inventory records, 11 users and two orders. EC2/EBS/EIP were
+unchanged and Soundbox remained stopped. The GitHub OIDC deployment workflow
+still requires its external role/environment setup.

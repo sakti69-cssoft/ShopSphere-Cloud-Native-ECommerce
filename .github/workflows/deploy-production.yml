@@ -42,7 +42,7 @@ jobs:
           git merge-base --is-ancestor "$REVISION" origin/main
 
       - name: Configure short-lived AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
